@@ -83,6 +83,8 @@ The task's `outputs/ti-validation/` directory retains:
   outputs, including every file emitted by TI.
 
 Evidence remains local to the task; TI installers, SDK sources, and generated C
-are not vendored into this repository. This was a local real-TI run. Existing
-GitHub CI still runs tests, typecheck, and formatting, not TI generation.
+are not vendored into this repository. This records the original local real-TI run. The subsequent
+[CI workflow](../.github/workflows/ti-validation.yml) repeats the same validation on
+Linux and retains its own logs and outputs as GitHub Actions artifacts. See the
+[root README](../README.md#real-ti-validation-in-ci) for that setup.
 Firmware compilation and hardware execution remain **NOT RUN**.

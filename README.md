@@ -114,7 +114,8 @@ bun run typecheck
 bun run format:check
 ```
 
-`bun run format` applies Biome fixes. CI runs the three checks above independently.
+`bun run format` applies Biome fixes. CI runs the three checks above independently,
+plus the real TI validation described below.
 The package exposes TypeScript directly from `lib/index.ts`; there is no build or
 publishing step. Lockfile generation is intentionally disabled.
 
@@ -135,8 +136,8 @@ The same runner also validates converter-generated A7 and B7 inputs.
 Obtain SysConfig **1.14.0+2667** from TI's
 [release archive](https://software-dl.ti.com/ccs/esd/sysconfig/docs/release_archive.html)
 and use the pinned MCU+ SDK source below on a supported host. Installation and
-any required license acceptance are manual prerequisites. No TI installation is
-performed by this repository. Keep the SDK outside this repository:
+any required license acceptance are prerequisites for local runs. The CI workflow
+automates installation as documented below. Keep the SDK outside this repository:
 
 ```sh
 git clone --depth 1 --branch REL.MCUSDK.08.06.00.34 \
@@ -185,6 +186,34 @@ duplicate reservations, and unrecognized forms in the pinned TI output format.
 The printed temporary directory is retained for review, including on failure.
 The checked-in fixture is never an output path. Missing prerequisites, failed TI
 processes, missing outputs, and mismatched configuration all return nonzero.
+
+## Real TI validation in CI
+
+[TI SysConfig validation](.github/workflows/ti-validation.yml) runs on pull requests,
+pushes to `main`, and manual dispatch using an Ubuntu 22.04 x86_64 GitHub runner.
+It installs the official Linux SysConfig **1.14.0+2667** release, checks the downloaded
+installer against its pinned SHA-256, verifies the CLI version, and checks out SDK
+revision **e7e068494bbd5714d6d34c55b10184a5bd84ed30** directly. It uses TI's bundled
+Node runtime and the same `bun run validate:ti` command used locally.
+
+The job validates the native reference, its round trip, and converter-generated
+A7/B7 inputs. Native/round-trip GPIO macros and pinmux code must match; converted
+outputs must satisfy the independent pin, direction, mux-mode, and exact reservation
+checks. A download, setup, TI process, or assertion failure fails the job. Bash
+`pipefail` preserves failure status when output is copied to a log.
+
+Each run uploads a `ti-validation-<run-id>-<attempt>` artifact for 14 days, including
+setup/version logs, the SDK manifest, validation stdout/stderr, and fresh inputs and
+generated outputs. Upload is attempted on failure too, retaining partial evidence.
+Installers and the SDK checkout stay outside the artifact and repository. No TI
+account credentials or repository secrets are required.
+
+The workflow uses TI's unattended installer, which accepts the TI license. Enabling
+or running it requires authorization to accept those terms for use with TI devices,
+as obtained for this setup. Forks should review the same license before enabling
+this workflow. Linux installer source:
+[official TI archive](https://software-dl.ti.com/ccs/esd/sysconfig/docs/release_archive.html);
+SHA-256: `0ff048df222151d34757aae3bec01ee586a85e1641dadeda7b227a7055b501b4`.
 
 ## Verification status
 
