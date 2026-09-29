@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "lib": ["ESNext"],
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": true,
+    "types": ["bun"],
+    "paths": {
+      "lib/*": ["./lib/*"],
+      "tests/*": ["./tests/*"]
+    }
+  },
+  "include": ["lib", "scripts", "tests"]
+}
