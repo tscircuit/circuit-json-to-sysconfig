@@ -2,9 +2,10 @@
 
 `reference.syscfg` is an unchanged copy of TI's
 [GPIO LED blink example](https://github.com/TexasInstruments/mcupsdk-core/blob/e7e068494bbd5714d6d34c55b10184a5bd84ed30/examples/drivers/gpio/gpio_led_blink/am243x-evm/r5fss0-0_nortos/example.syscfg).
-It is a validation input, **not an approved demo target**. No orderable
-manufacturer part number has been verified or selected; `AM243x_ALV_beta` is a
-SysConfig device identifier, not an MPN.
+It is a validation input, **not an approved demo target**. The fixture itself does not identify an orderable manufacturer part number;
+`AM243x_ALV_beta` is a SysConfig device identifier, not an MPN. The converter's
+separately verified, narrowly supported MPN is documented in
+[the target profile](../../../lib/targets/README.md).
 
 | Item | Recorded source identity |
 | --- | --- |
@@ -17,7 +18,7 @@ SysConfig device identifier, not an MPN.
 | Product ID in source metadata and native header | `MCU_PLUS_SDK@07.03.01` |
 | Native file's creation tool | `1.8.1+1900` (header also records data/timestamp `2021040816`) |
 | Release's required tool | SysConfig `1.14.0`, build `2667` |
-| Local real-TI validation | **NOT RUN**; missing runtime, device database, and complete SDK |
+| Local real-TI validation | **PASSED**; native and round-trip generated with SysConfig 1.14.0+2667 |
 
 The historical header is preserved verbatim. It is not a claim that SDK 07.03.01
 or SysConfig 1.8.1 was used for this PR. The selected source release's
@@ -45,9 +46,8 @@ SHA-256 of the native file:
 - [`pinmux_am243x.syscfg.js`](https://github.com/TexasInstruments/mcupsdk-core/blob/e7e068494bbd5714d6d34c55b10184a5bd84ed30/source/drivers/.meta/pinmux/pinmux_am243x.syscfg.js)
   reads `system.deviceData.devicePins`, peripheral interfaces, mux settings, and
   electrical defaults. It emits the resolved peripheral/device/ball comment and
-  pinmux register settings. The SysConfig-supplied device database itself was
-  unavailable for local inspection or execution; a product manifest cannot
-  substitute for it.
+  pinmux register settings. The real validation run used the SysConfig 1.14.0+2667
+  device database; a product manifest alone cannot substitute for it.
 - The [GPIO header template](https://github.com/TexasInstruments/mcupsdk-core/blob/e7e068494bbd5714d6d34c55b10184a5bd84ed30/source/drivers/.meta/gpio/templates/gpio.h.xdt)
   emits the base-address, pin, direction, and trigger macros checked by the runner.
   The [pinmux template](https://github.com/TexasInstruments/mcupsdk-core/blob/e7e068494bbd5714d6d34c55b10184a5bd84ed30/source/drivers/.meta/pinmux/pinmux_config.c.xdt)
