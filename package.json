@@ -21,7 +21,9 @@
     "validate:ti": "bun scripts/validate-ti-reference.ts"
   },
   "dependencies": {
-    "sysconfigts": "github:tscircuit/sysconfigts#21f9b7e6ad941d8925581ba0d7d084a575ee1454"
+    "circuit-json": "0.0.506",
+    "sysconfigts": "github:tscircuit/sysconfigts#21f9b7e6ad941d8925581ba0d7d084a575ee1454",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.14",

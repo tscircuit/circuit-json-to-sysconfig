@@ -1,2 +1,2 @@
-// Conversion APIs will be introduced with the first real Circuit JSON mapping.
-export {}
+export type { ConvertCircuitJsonToSysConfigOptions } from "./convert-circuit-json-to-sysconfig"
+export { convertCircuitJsonToSysConfig } from "./convert-circuit-json-to-sysconfig"

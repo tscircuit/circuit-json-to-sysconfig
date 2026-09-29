@@ -112,6 +112,11 @@ for (const [behavior, diagnostic] of [
   ["missing_solution", "Expected resolved"],
   ["changed_gpio", "configuration differs"],
   ["changed_pinmux", "configuration differs"],
+  ["wrong_mode", "mux mode 7"],
+  ["converted_failure", "exit 7"],
+  ["converted_missing", "ti_drivers_config.c"],
+  ["converted_wrong_pin", "GPIO_CONVERTED_PIN (6)"],
+  ["converted_extra_pin", "no extra pin reservations"],
 ] as const) {
   test(`controlled subprocess: ${behavior} fails with a useful diagnostic`, async () => {
     environment.TEST_TI_BEHAVIOR = behavior
@@ -129,6 +134,12 @@ test("controlled subprocess: uses fresh outputs, preserves inputs, and passes pa
     const result = await runValidation()
     expect(result.exitCode).toBe(0)
     expect(result.stdout).toContain("pinmux code is preserved")
+    expect(result.stdout).toContain(
+      "converted-A7: GPIO_CONVERTED resolves to MCU_GPIO0_5 / A7",
+    )
+    expect(result.stdout).toContain(
+      "converted-B7: GPIO_CONVERTED resolves to MCU_GPIO0_6 / B7",
+    )
   }
   const runDirectories = (await readdir(testDirectory)).filter((name) =>
     name.startsWith("circuit-json-to-sysconfig-"),
@@ -159,6 +170,22 @@ test("controlled subprocess: uses fresh outputs, preserves inputs, and passes pa
         join(inputDirectory, "generated"),
         join(inputDirectory, "reference.syscfg"),
       ])
+    }
+  }
+  for (const runDirectory of runDirectories) {
+    for (const ball of ["A7", "B7"]) {
+      const converted = await readFile(
+        join(
+          testDirectory,
+          runDirectory,
+          `converted-${ball}`,
+          "converted.syscfg",
+        ),
+        "utf8",
+      )
+      expect(converted).toContain(`gpio1.MCU_GPIO.gpioPin.$assign = "${ball}"`)
+      expect(converted).toContain('gpio1.$name = "GPIO_CONVERTED"')
+      expect(converted).toContain("debug_log.enableUartLog = false")
     }
   }
   expect(await readFile(nativePath, "utf8")).toBe(reference)

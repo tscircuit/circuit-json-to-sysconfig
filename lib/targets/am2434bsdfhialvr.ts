@@ -1,0 +1,22 @@
+// Source references and the deliberately limited pin set are in README.md.
+export const am2434bsdfhialvr = {
+  manufacturer_part_number: "AM2434BSDFHIALVR",
+  device: "AM243x_ALV_beta",
+  package: "ALV",
+  part: "ALV",
+  context: "r5fss0-0",
+  product: "MCU_PLUS_SDK@07.03.01",
+  gpioPins: [
+    { ball: "A7", peripheral: "MCU_GPIO0", pin: 5, devicePin: "MCU_SPI1_CS0" },
+    { ball: "B7", peripheral: "MCU_GPIO0", pin: 6, devicePin: "MCU_SPI1_CS1" },
+  ],
+} as const
+
+export function resolveTiTarget(manufacturer_part_number: string | undefined) {
+  if (manufacturer_part_number !== am2434bsdfhialvr.manufacturer_part_number) {
+    throw new Error(
+      `Unsupported manufacturer_part_number ${JSON.stringify(manufacturer_part_number)}; only AM2434BSDFHIALVR (ALV package) is supported.`,
+    )
+  }
+  return am2434bsdfhialvr
+}

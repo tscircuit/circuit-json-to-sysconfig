@@ -2,9 +2,10 @@
 
 `reference.syscfg` is an unchanged copy of TI's
 [GPIO LED blink example](https://github.com/TexasInstruments/mcupsdk-core/blob/e7e068494bbd5714d6d34c55b10184a5bd84ed30/examples/drivers/gpio/gpio_led_blink/am243x-evm/r5fss0-0_nortos/example.syscfg).
-It is a validation input, **not an approved demo target**. No orderable
-manufacturer part number has been verified or selected; `AM243x_ALV_beta` is a
-SysConfig device identifier, not an MPN.
+It is a validation input, **not an approved demo target**. The fixture itself does not identify an orderable manufacturer part number;
+`AM243x_ALV_beta` is a SysConfig device identifier, not an MPN. The converter's
+separately verified, narrowly supported MPN is documented in
+[the target profile](../../../lib/targets/README.md).
 
 | Item | Recorded source identity |
 | --- | --- |
