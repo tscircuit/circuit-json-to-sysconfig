@@ -33,10 +33,23 @@ const extraPin =
   behavior === "converted_extra_pin" && isConverted
     ? "/* USART0_RXD -> UART0_RXD (D15) */ { PIN_UART0_RXD, ( PIN_MODE(0) ) },"
     : ""
-const pinmux = `static Pinmux_PerCfg_t gPinMuxMcuDomainCfg[] = {
+const unannotatedPin =
+  behavior === "converted_unannotated_extra" && isConverted
+    ? "{ PIN_UART0_RXD, ( PIN_MODE(0) ) },"
+    : behavior === "converted_duplicate" && isConverted
+      ? `{ PIN_${devicePin}, ( PIN_MODE(7) ) },`
+      : behavior === "converted_unknown_initializer" && isConverted
+        ? "{ .offset = PIN_UART0_RXD, .settings = PIN_MODE(0) },"
+        : ""
+const pinmux = `static Pinmux_PerCfg_t gPinMuxMainDomainCfg[] = {
+  ${behavior === "converted_extra_main" && isConverted ? "{ PIN_UART0_TXD, ( PIN_MODE(0) ) }," : ""}
+  { PINMUX_END, PINMUX_END }
+};
+static Pinmux_PerCfg_t gPinMuxMcuDomainCfg[] = {
   /* MCU_GPIO0_${generatedPinIndex} -> ${devicePin} (${ball}) */
   { PIN_${devicePin}, ( PIN_MODE(${pinMode})${pull} ) },
   ${extraPin}
+  ${unannotatedPin}
   { PINMUX_END, PINMUX_END }
 };`
 const header = `#define ${gpio_name}_BASE_ADDR (CSL_MCU_GPIO0_BASE)

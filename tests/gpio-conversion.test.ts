@@ -252,3 +252,61 @@ test("uses the actual schema to reject a string pin_number", () => {
     "pin_number",
   )
 })
+
+for (const gpio_name of [["GPIO_LED"], {}, 123, true, false, null, undefined]) {
+  test(`rejects non-string runtime GPIO name ${JSON.stringify(gpio_name)}`, () => {
+    // Exercise a JSON caller's boundary, including an omitted name, without casts.
+    const runtimeOptions = JSON.parse(JSON.stringify({ ...options, gpio_name }))
+    expect(() =>
+      convertCircuitJsonToSysConfig(createCircuit(), runtimeOptions),
+    ).toThrow("gpio_name must be a string")
+  })
+}
+
+for (const portOverrides of [
+  { name: "CS1", port_hints: ["B7"] },
+  { name: "GPIO_OUTPUT", port_hints: ["B7", "CS1"] },
+]) {
+  test(`recognizes a B7 ball alongside signal alias ${JSON.stringify(portOverrides)}`, () => {
+    const circuitJson = createCircuit()
+    Object.assign(getPort(circuitJson), portOverrides)
+    expect(
+      getLiteral(
+        convertCircuitJsonToSysConfig(circuitJson, options),
+        "gpio1.MCU_GPIO.gpioPin.$assign",
+      ),
+    ).toBe("B7")
+  })
+}
+
+for (const ball of ["A1", "C7", "AA21", "Y20"]) {
+  test(`rejects a conflicting real ALV package ball ${ball}`, () => {
+    const circuitJson = createCircuit()
+    getPort(circuitJson).port_hints = ["B7", ball]
+    expect(() => convertCircuitJsonToSysConfig(circuitJson, options)).toThrow(
+      "unambiguous package-ball",
+    )
+  })
+}
+
+for (const label of [
+  "CS1",
+  "A0",
+  "A22",
+  "AA22",
+  "AB1",
+  "I1",
+  "O1",
+  "Q1",
+  "S1",
+  "X1",
+  "Z1",
+]) {
+  test(`does not interpret ${label} as a physical ALV ball`, () => {
+    const circuitJson = createCircuit()
+    getPort(circuitJson).port_hints = [label]
+    expect(() => convertCircuitJsonToSysConfig(circuitJson, options)).toThrow(
+      "unambiguous package-ball",
+    )
+  })
+}

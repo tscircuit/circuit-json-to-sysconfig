@@ -117,6 +117,10 @@ for (const [behavior, diagnostic] of [
   ["converted_missing", "ti_drivers_config.c"],
   ["converted_wrong_pin", "GPIO_CONVERTED_PIN (6)"],
   ["converted_extra_pin", "no extra pin reservations"],
+  ["converted_unannotated_extra", "no extra pin reservations"],
+  ["converted_extra_main", "no extra pin reservations"],
+  ["converted_duplicate", "Duplicate pinmux reservation"],
+  ["converted_unknown_initializer", "Unrecognized pinmux initializer"],
 ] as const) {
   test(`controlled subprocess: ${behavior} fails with a useful diagnostic`, async () => {
     environment.TEST_TI_BEHAVIOR = behavior

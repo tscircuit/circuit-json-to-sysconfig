@@ -3,7 +3,7 @@
 Convert one Circuit JSON GPIO request into a TI SysConfig document. The initial
 scope is **AM2434BSDFHIALVR**, ALV package, R5F core `r5fss0-0`, with output on
 ball **A7** (`MCU_GPIO0_5`) or **B7** (`MCU_GPIO0_6`). These mappings are documented;
-**real TI generation is NOT RUN**. This is not an approved demo-hardware choice.
+**real TI generation is NOT RUN**. The planned CC2340 pedometer target is outside this PR.
 
 ## Library usage
 
@@ -41,19 +41,48 @@ Changing the port's `port_hints` to `["B7"]` changes the fixed physical assignme
 the options stay the same. The library returns a `SysConfig` model, does not mutate
 inputs, and performs no file access or TI execution.
 
-### Inspect and preview the exported source
+### Incremental conversion
 
-The pinned `sysconfigts` revision also exposes `inspectSysConfig(config)` and
-`generateSysConfigSvg(config)`. The latter returns a deterministic SVG string.
-Both consume the document returned above without mutating it. They show explicit
-source settings, not TI-resolved pins; no script or SDK evaluation occurs.
-See [sysconfigts PR #1](https://github.com/tscircuit/sysconfigts/pull/1).
-That dependency's pedometer fixture does not add CC2340 conversion support here.
+```ts
+import { CircuitJsonToSysConfigConverter } from "circuit-json-to-sysconfig"
+
+const converter = new CircuitJsonToSysConfigConverter(circuitJson, {
+  source_component_id: "mcu",
+  source_port_id: "gpio_output",
+  gpio_name: "GPIO_LED",
+  direction: "output",
+})
+while (!converter.finished) converter.step()
+console.log(converter.getOutput().getString())
+```
+
+Each `step()` performs one stage: resolve the MCU/target, validate the GPIO request,
+then construct the document. `runUntilFinished()` runs the remaining stages; the
+convenience function above wraps that same class. The constructor snapshots inputs,
+so later caller edits do not change an in-progress conversion. `getOutput()` throws
+until completion. A failed step throws without advancing, and steps after completion
+are harmless. No incomplete document is returned.
+
+### Inspect the exported source
+
+```ts
+import { inspectSysConfig } from "sysconfigts"
+
+console.log(inspectSysConfig(config))
+```
+
+Inspection returns ordered text rows for headers, modules, instances, and assignments.
+Fixed `$assign` settings remain distinct from `$suggestSolution` suggestions. It is
+deterministic and does not modify the document or evaluate TI scripts/device defaults.
+Reviewed inline snapshots cover A7/B7 inspection and serialization/re-parsing.
 
 ## Supported input
 
 Select one `source_component` with `ftype: "simple_chip"` and the exact MPN above,
-and one `source_port` belonging to it. An exact package-ball label must appear in
+and one `source_port` belonging to it. Physical identity follows the documented ALV
+21×21 ball grid: rows A–H, J–N, P, R, T–W, Y, AA; columns 1–21. Thus `CS1` is a
+signal alias, while unsupported real balls such as `C7` or `AA21` still participate
+in conflict detection. An exact package-ball label must appear in
 `name` or `port_hints`; repeated identical labels are allowed. `pin_number` stays
 numeric and never determines a BGA ball. Names such as `LED at A7`, numeric aliases,
 and signal-only aliases do not supply a physical identity.
@@ -89,13 +118,10 @@ bun run format:check
 The package exposes TypeScript directly from `lib/index.ts`; there is no build or
 publishing step. Lockfile generation is intentionally disabled.
 
-The initial local validation used Bun 1.3.9, TypeScript 5.9.3, Biome 2.5.14,
-`@types/bun` 1.4.2, and sysconfigts `21f9b7e6ad941d8925581ba0d7d084a575ee1454`.
-The dependency now pins the published preview commit
-[`e0eeb4cd10748ebd7515f458390af634bd5ea242`](https://github.com/tscircuit/sysconfigts/commit/e0eeb4cd10748ebd7515f458390af634bd5ea242)
-from [sysconfigts PR #1](https://github.com/tscircuit/sysconfigts/pull/1), not a
-floating branch or local path. That dependency PR is still under review. Run the
-existing CI checks against this pin; it does not replace the real-TI gate.
+Tested locally with Bun 1.3.9, TypeScript 5.9.3, Biome 2.5.14, and `@types/bun` 1.4.2.
+The dependency pins the merged [sysconfigts PR #1](https://github.com/tscircuit/sysconfigts/pull/1)
+commit [`35381191fb3946185632d9c4c2ac4c2e69329535`](https://github.com/tscircuit/sysconfigts/commit/35381191fb3946185632d9c4c2ac4c2e69329535),
+which exports `inspectSysConfig()`. This does not replace the real-TI gate.
 Circuit JSON is pinned to `0.0.506`; Zod `3.25.76` is an explicit runtime dependency
 because that Circuit JSON release imports Zod without declaring it as a runtime
 dependency.
@@ -152,16 +178,19 @@ It checks the resolved GPIO base, pin, direction, and A7 mapping, then compares 
 `GPIO_LED_*` macros and pinmux C code (ignoring block comments and whitespace).
 It then generates separate converted A7 and B7 configurations, checking each
 circuit-derived expectation: GPIO base, pin, output direction, resolved package
-ball, actual mux-mode-7 entry, and no additional pin reservations.
+ball, actual mux-mode-7 entry, and the exact configured pin set. It reads both
+main/MCU initializer arrays, excluding `PINMUX_END`, and rejects unannotated extras,
+duplicate reservations, and unrecognized forms in the pinned TI output format.
 The printed temporary directory is retained for review, including on failure.
 The checked-in fixture is never an output path. Missing prerequisites, failed TI
 processes, missing outputs, and mismatched configuration all return nonzero.
 
 ## Verification status
 
-- **Passed:** converter/target tests, including A7 → B7, rejection cases,
-  determinism, and input preservation; unchanged native-reference tests;
-  controlled subprocess tests for all four inputs; typecheck and formatting.
+- **Passed:** 127 tests and 2 reviewed inline snapshots, covering staged/wrapper
+  equivalence, A7 → B7, malformed names, ball/alias conflicts, output inspection,
+  and strict pinmux reading; unchanged native-reference tests; controlled
+  subprocess tests for all four inputs; typecheck and formatting.
 - **NOT RUN:** real TI generation for native, round-trip, converted A7, or
   converted B7. No SysConfig runtime/CLI/device database or complete matching SDK
   is installed, and none of the three environment variables is configured.

@@ -1,6 +1,6 @@
 # AM2434BSDFHIALVR target provenance
 
-This is one implementation target, not a user-approved demo-hardware selection.
+This AM2434 implementation target is separate from the planned CC2340 pedometer demo.
 The profile is a small transcription of documented identities and two GPIO
 mappings, not a complete device database. No native `.syscfg` text is loaded or
 copied by the converter. Real TI generation remains **NOT RUN**.
@@ -21,6 +21,12 @@ Table 5-1 (page 28) and Table 5-42 (page 72):
 Table 4-1 includes AM2434's R5F0_0 processor. Table 9-1 identifies revision B as
 SR2.0 and the ALV package designator. The full MPN is matched exactly: no family,
 package suffix, tray/reel, or alternate-marking inference is implemented.
+
+Physical-ball classification uses the full populated **21×21** ALV grid in package
+outline **ALV0441A, drawing 4225999/A (June 2020)**, included on PDF page 279 of the
+same datasheet: rows A–H, J–N, P, R, T–W, Y, AA and columns 1–21. This identifies
+all 441 package balls for ambiguity checks without adding their GPIO support.
+`CS1` is not an ALV row/column identity; `C7` and `AA21` are real, unsupported balls.
 
 ## SysConfig and SDK identity
 
@@ -55,7 +61,10 @@ module contract. The [GPIO SoC implementation](https://github.com/TexasInstrumen
 uses TI's resolved solution to produce base/pin macros. The
 [pinmux template](https://github.com/TexasInstruments/mcupsdk-core/blob/e7e068494bbd5714d6d34c55b10184a5bd84ed30/source/drivers/.meta/pinmux/pinmux_config.c.xdt)
 emits each resolved ball annotation and register entry. The runner checks both,
-including mux mode 7, and requires only one resolved pin in each converted file.
+including mux mode 7. The reader consumes actual entries in both main/MCU arrays,
+requires their final `PINMUX_END`, and rejects unknown initializer syntax or duplicate
+reservations. Converted output must contain exactly the expected MCU-domain pin;
+annotation counts never stand in for this check.
 Expected A7/B7 results in the runner are independent of the converter lookup.
 
 ## Circuit JSON identity contract
@@ -67,7 +76,7 @@ from `circuit-json@0.0.506`. The inspected schema revision is
 [core Port implementation](https://github.com/tscircuit/core/blob/e4c437f686004608f47a566fe5ced73fd26cec4f/lib/components/primitive-components/Port/Port.ts)
 writes names/aliases (including numeric aliases) into `port_hints`. Consequently,
 this converter requires an explicit exact ball alias instead of coercing or
-interpreting an ordinal. Labels that look like other balls cause rejection;
+interpreting an ordinal. Conflicting labels in the verified ALV grid cause rejection;
 matching known signal aliases corroborate a ball but cannot substitute for it.
 
 ## License and local verification
@@ -78,7 +87,7 @@ BSD-3-Clause per its [manifest](https://github.com/TexasInstruments/mcupsdk-core
 [LICENSE-TI.txt](LICENSE-TI.txt) carries its notice with the shipped target setup.
 
 Local tests use Bun 1.3.9, TypeScript 5.9.3, Circuit JSON 0.0.506, and pinned
-sysconfigts `21f9b7e6ad941d8925581ba0d7d084a575ee1454`. Converter, native-reference,
+sysconfigts `35381191fb3946185632d9c4c2ac4c2e69329535`. Converter, native-reference,
 and controlled-runner tests pass. **Real TI generation, firmware compilation,
 and hardware execution: NOT RUN.** See the root README for reproduction and the
 missing installation prerequisites.

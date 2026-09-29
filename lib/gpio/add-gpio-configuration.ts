@@ -1,9 +1,9 @@
 import type { SysConfig } from "sysconfigts"
-import type { resolveGpioRequest } from "./resolve-gpio-request"
+import type { ResolvedGpioRequest } from "./resolve-gpio-request"
 
 export function addGpioConfiguration(
   config: SysConfig,
-  request: ReturnType<typeof resolveGpioRequest>,
+  request: ResolvedGpioRequest,
 ) {
   config.addModule({
     name: "gpio",

@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "circuit-json": "0.0.506",
-    "sysconfigts": "github:tscircuit/sysconfigts#e0eeb4cd10748ebd7515f458390af634bd5ea242",
+    "sysconfigts": "github:tscircuit/sysconfigts#35381191fb3946185632d9c4c2ac4c2e69329535",
     "zod": "3.25.76"
   },
   "devDependencies": {

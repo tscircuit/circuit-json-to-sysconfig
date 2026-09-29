@@ -6,11 +6,15 @@ export const am2434bsdfhialvr = {
   part: "ALV",
   context: "r5fss0-0",
   product: "MCU_PLUS_SDK@07.03.01",
+  // TI ALV0441A drawing 4225999/A: a populated 21 × 21 grid (see README.md).
+  packageBallPattern: /^(?:[A-HJ-NPRT-WY]|AA)(?:[1-9]|1[0-9]|2[01])$/,
   gpioPins: [
     { ball: "A7", peripheral: "MCU_GPIO0", pin: 5, devicePin: "MCU_SPI1_CS0" },
     { ball: "B7", peripheral: "MCU_GPIO0", pin: 6, devicePin: "MCU_SPI1_CS1" },
   ],
 } as const
+
+export type TiTarget = typeof am2434bsdfhialvr
 
 export function resolveTiTarget(manufacturer_part_number: string | undefined) {
   if (manufacturer_part_number !== am2434bsdfhialvr.manufacturer_part_number) {

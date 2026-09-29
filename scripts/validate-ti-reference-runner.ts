@@ -11,6 +11,7 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { parseSysConfig } from "sysconfigts"
 import { createGpioValidationCases } from "./create-gpio-validation-cases"
+import { readPinmuxEntries } from "./read-pinmux-entries"
 
 const referencePath = new URL(
   "../tests/fixtures/ti-reference/reference.syscfg",
@@ -129,9 +130,7 @@ async function readResolvedGpio(
     gpioMacros: driversHeader
       .match(new RegExp(String.raw`^#define\s+${expected.gpio_name}_.*$`, "gm"))
       ?.join("\n"),
-    resolvedPinCount: [
-      ...pinmux.matchAll(/\/\*\s*\w+\s*->\s*\w+\s*\([A-Z]+\d+\)\s*\*\//g),
-    ].length,
+    pinmuxEntries: readPinmuxEntries(pinmux),
     // Ignore generated comments (which may contain paths); compare all pinmux code.
     pinmuxCode: pinmux
       .replace(/\/\*[\s\S]*?\*\//g, "")
@@ -218,7 +217,13 @@ export async function validateTiReference(environment: NodeJS.ProcessEnv) {
       outputDirectory,
     })
     const resolvedGpio = await readResolvedGpio(outputDirectory, expected)
-    if (resolvedGpio.resolvedPinCount !== 1) {
+    const [pinmuxEntry] = resolvedGpio.pinmuxEntries
+    if (
+      resolvedGpio.pinmuxEntries.length !== 1 ||
+      pinmuxEntry?.domain !== "mcu" ||
+      pinmuxEntry.devicePin !== `PIN_${expected.devicePin}` ||
+      pinmuxEntry.muxMode !== 7
+    ) {
       throw new Error(
         `Expected exactly one resolved GPIO pin and no extra pin reservations in ${variant}`,
       )

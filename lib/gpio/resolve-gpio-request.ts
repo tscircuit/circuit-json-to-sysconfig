@@ -1,9 +1,15 @@
 import { type CircuitJson, type SourcePort, source_port } from "circuit-json"
-import { am2434bsdfhialvr } from "../targets/am2434bsdfhialvr"
+import type { TiTarget } from "../targets/am2434bsdfhialvr"
 
 export interface GpioRequest {
   source_component_id: string
   source_port_id: string
+  gpio_name: string
+  direction: "output"
+}
+
+export interface ResolvedGpioRequest {
+  gpioPin: TiTarget["gpioPins"][number]
   gpio_name: string
   direction: "output"
 }
@@ -32,24 +38,29 @@ function getPortLabels(port: SourcePort) {
   return [...new Set([port.name, ...(port.port_hints ?? [])])]
 }
 
-function getBallLabels(port: SourcePort) {
+function getBallLabels(port: SourcePort, target: TiTarget) {
   return getPortLabels(port).filter((label) =>
-    /^[A-Z]{1,2}[1-9][0-9]*$/.test(label),
+    target.packageBallPattern.test(label),
   )
 }
 
 export function resolveGpioRequest(
-  circuitJson: CircuitJson,
   request: GpioRequest,
-) {
+  ctx: { circuitJson: CircuitJson; target: TiTarget },
+): { selectedPort: SourcePort; gpioRequest: ResolvedGpioRequest } {
   if (request.direction !== "output")
     throw new Error("Only GPIO direction output is supported")
-  if (!/^[A-Z][A-Z0-9_]*$/.test(request.gpio_name)) {
+  if (
+    typeof request.gpio_name !== "string" ||
+    !/^[A-Z][A-Z0-9_]*$/.test(request.gpio_name)
+  ) {
     throw new Error(
-      "gpio_name must be an uppercase C identifier starting with A-Z",
+      "gpio_name must be a string containing an uppercase C identifier starting with A-Z",
     )
   }
-  const ports = circuitJson.filter((element) => element.type === "source_port")
+  const ports = ctx.circuitJson.filter(
+    (element) => element.type === "source_port",
+  )
   const matches = ports.filter(
     (port) => port.source_port_id === request.source_port_id,
   )
@@ -73,13 +84,13 @@ export function resolveGpioRequest(
       `source_port ${port.source_port_id}: ${conflictingAttribute} conflicts with this GPIO-only output scope`,
     )
   }
-  const ballLabels = getBallLabels(port)
+  const ballLabels = getBallLabels(port, ctx.target)
   if (ballLabels.length !== 1) {
     throw new Error(
       `source_port ${port.source_port_id}: expected one unambiguous package-ball label in name/port_hints; found ${ballLabels.join(", ") || "none"}`,
     )
   }
-  const gpioPin = am2434bsdfhialvr.gpioPins.find(
+  const gpioPin = ctx.target.gpioPins.find(
     (gpioPin) => gpioPin.ball === ballLabels[0],
   )
   if (!gpioPin) {
@@ -88,7 +99,7 @@ export function resolveGpioRequest(
     )
   }
   const labels = getPortLabels(port)
-  for (const otherPin of am2434bsdfhialvr.gpioPins) {
+  for (const otherPin of ctx.target.gpioPins) {
     if (
       otherPin.ball !== gpioPin.ball &&
       (labels.includes(otherPin.devicePin) ||
@@ -121,5 +132,12 @@ export function resolveGpioRequest(
       )
     }
   }
-  return { gpioPin, gpio_name: request.gpio_name, direction: request.direction }
+  return {
+    selectedPort: port,
+    gpioRequest: {
+      gpioPin,
+      gpio_name: request.gpio_name,
+      direction: request.direction,
+    },
+  }
 }
