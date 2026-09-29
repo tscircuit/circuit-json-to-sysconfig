@@ -2,8 +2,8 @@
 
 Convert one Circuit JSON GPIO request into a TI SysConfig document. The initial
 scope is **AM2434BSDFHIALVR**, ALV package, R5F core `r5fss0-0`, with output on
-ball **A7** (`MCU_GPIO0_5`) or **B7** (`MCU_GPIO0_6`). These mappings are documented;
-**real TI generation is NOT RUN**. The planned CC2340 pedometer target is outside this PR.
+ball **A7** (`MCU_GPIO0_5`) or **B7** (`MCU_GPIO0_6`). These mappings are documented and
+**real TI generation passed for all four validation inputs**. The planned CC2340 pedometer target is outside this PR.
 
 ## Library usage
 
@@ -154,7 +154,8 @@ All three environment variables are required. Set them to the actual local
 runtime, CLI script, and SDK root; no PATH discovery or developer-specific paths
 are used. The source checkout supplies the inspected SDK metadata; the separate
 SysConfig installation supplies its runtime and device database. This combination
-still needs its first real-TI run. The runner does not enforce installed versions;
+passed real TI generation on macOS 26.6.2 arm64 using the bundled x86_64 Node
+v14.16.0 through Rosetta. The runner does not enforce installed versions;
 use the pinned inputs above when reproducing this reference.
 
 The runner follows the upstream example makefile's invocation:
@@ -191,12 +192,15 @@ processes, missing outputs, and mismatched configuration all return nonzero.
   equivalence, A7 → B7, malformed names, ball/alias conflicts, output inspection,
   and strict pinmux reading; unchanged native-reference tests; controlled
   subprocess tests for all four inputs; typecheck and formatting.
-- **NOT RUN:** real TI generation for native, round-trip, converted A7, or
-  converted B7. No SysConfig runtime/CLI/device database or complete matching SDK
-  is installed, and none of the three environment variables is configured.
-  `bun run validate:ti` fails with `Set TI_SYSCONFIG_NODE`.
+- **Passed:** real TI generation for native, round-trip, converted A7, and
+  converted B7 using SysConfig 1.14.0+2667 and SDK revision
+  `e7e068494bbd5714d6d34c55b10184a5bd84ed30`. `bun run validate:ti` exited 0.
+  Native/round-trip GPIO macros and pinmux code matched. Converted A7/B7 resolved
+  to MCU_GPIO0_5/6, respectively, in output direction and mux mode 7, with exactly
+  one MCU-domain pin and no main-domain pins per converted output. See the
+  [execution record](docs/ti-validation.md) for versions, setup, and retained evidence.
 - **NOT RUN:** firmware compilation and hardware execution.
 
-Controlled subprocess tests are not evidence of TI acceptance. Parsing cannot
-resolve pins or validate effective SDK defaults. The PR must remain draft until
-the documented TI installation accepts all four inputs and confirms both mappings.
+Controlled subprocess tests alone are not evidence of TI acceptance. The real-TI
+run above separately confirmed the mappings and effective pin reservations. This
+validates configuration generation, not firmware compilation or hardware operation.

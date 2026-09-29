@@ -3,7 +3,7 @@
 This AM2434 implementation target is separate from the planned CC2340 pedometer demo.
 The profile is a small transcription of documented identities and two GPIO
 mappings, not a complete device database. No native `.syscfg` text is loaded or
-copied by the converter. Real TI generation remains **NOT RUN**.
+copied by the converter. Real TI generation **passed** for native, round-trip, and converted A7/B7 inputs.
 
 ## Exact identity and pins
 
@@ -44,7 +44,8 @@ validation runner explicitly supplies this checkout's `.metadata/product.json`.
 It does not falsely relabel the manifest as 08.06. Required SysConfig is
 **1.14.0+2667**, established by the SDK's `imports.mak` and
 [08.06 release notes](https://software-dl.ti.com/mcu-plus-sdk/esd/AM243X/08_06_00_43/exports/docs/api_guide_am243x/RELEASE_NOTES_08_06_00_PAGE.html).
-The actual SysConfig device database is a missing validation prerequisite.
+The actual SysConfig 1.14.0+2667 device database was used in the successful
+[validation run](../../docs/ti-validation.md).
 
 ## Minimal setup and generated-output checks
 
@@ -88,6 +89,6 @@ BSD-3-Clause per its [manifest](https://github.com/TexasInstruments/mcupsdk-core
 
 Local tests use Bun 1.3.9, TypeScript 5.9.3, Circuit JSON 0.0.506, and pinned
 sysconfigts `35381191fb3946185632d9c4c2ac4c2e69329535`. Converter, native-reference,
-and controlled-runner tests pass. **Real TI generation, firmware compilation,
-and hardware execution: NOT RUN.** See the root README for reproduction and the
-missing installation prerequisites.
+and controlled-runner tests pass. **Real TI generation: PASSED** with the pinned
+tool and SDK. **Firmware compilation and hardware execution: NOT RUN.** See the
+root README for reproduction and the [execution record](../../docs/ti-validation.md).
