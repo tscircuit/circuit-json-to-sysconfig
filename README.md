@@ -41,6 +41,15 @@ Changing the port's `port_hints` to `["B7"]` changes the fixed physical assignme
 the options stay the same. The library returns a `SysConfig` model, does not mutate
 inputs, and performs no file access or TI execution.
 
+### Inspect and preview the exported source
+
+The pinned `sysconfigts` revision also exposes `inspectSysConfig(config)` and
+`generateSysConfigSvg(config)`. The latter returns a deterministic SVG string.
+Both consume the document returned above without mutating it. They show explicit
+source settings, not TI-resolved pins; no script or SDK evaluation occurs.
+See [sysconfigts PR #1](https://github.com/tscircuit/sysconfigts/pull/1).
+That dependency's pedometer fixture does not add CC2340 conversion support here.
+
 ## Supported input
 
 Select one `source_component` with `ftype: "simple_chip"` and the exact MPN above,
@@ -80,12 +89,16 @@ bun run format:check
 The package exposes TypeScript directly from `lib/index.ts`; there is no build or
 publishing step. Lockfile generation is intentionally disabled.
 
-Tested locally: Bun 1.3.9, TypeScript 5.9.3, Biome 2.5.14, `@types/bun` 1.4.2,
-and sysconfigts at
-[`21f9b7e6ad941d8925581ba0d7d084a575ee1454`](https://github.com/tscircuit/sysconfigts/commit/21f9b7e6ad941d8925581ba0d7d084a575ee1454).
-The GitHub dependency is pinned to that revision. Circuit JSON is pinned to
-`0.0.506`; Zod `3.25.76` is an explicit runtime dependency because that Circuit JSON
-release imports Zod without declaring it as a runtime dependency.
+The initial local validation used Bun 1.3.9, TypeScript 5.9.3, Biome 2.5.14,
+`@types/bun` 1.4.2, and sysconfigts `21f9b7e6ad941d8925581ba0d7d084a575ee1454`.
+The dependency now pins the published preview commit
+[`e0eeb4cd10748ebd7515f458390af634bd5ea242`](https://github.com/tscircuit/sysconfigts/commit/e0eeb4cd10748ebd7515f458390af634bd5ea242)
+from [sysconfigts PR #1](https://github.com/tscircuit/sysconfigts/pull/1), not a
+floating branch or local path. That dependency PR is still under review. Run the
+existing CI checks against this pin; it does not replace the real-TI gate.
+Circuit JSON is pinned to `0.0.506`; Zod `3.25.76` is an explicit runtime dependency
+because that Circuit JSON release imports Zod without declaring it as a runtime
+dependency.
 
 ## Run TI validation
 
