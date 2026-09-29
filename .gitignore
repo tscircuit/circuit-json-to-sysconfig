@@ -1,0 +1,16 @@
+node_modules/
+bun.lock
+bun.lockb
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+generated/
+coverage/
+dist/
+.ti/
+.env
+.env.*
+.cursor/
+.vscode/
+.DS_Store
+*.log

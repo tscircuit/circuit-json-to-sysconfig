@@ -1,0 +1,31 @@
+{
+  "name": "circuit-json-to-sysconfig",
+  "version": "0.0.1",
+  "description": "Foundation for converting Circuit JSON to TI SysConfig",
+  "type": "module",
+  "module": "lib/index.ts",
+  "types": "lib/index.ts",
+  "exports": "./lib/index.ts",
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tscircuit/circuit-json-to-sysconfig.git"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "tsc --noEmit",
+    "format": "biome check --write .",
+    "format:check": "biome check .",
+    "validate:ti": "bun scripts/validate-ti-reference.ts"
+  },
+  "dependencies": {
+    "sysconfigts": "github:tscircuit/sysconfigts#21f9b7e6ad941d8925581ba0d7d084a575ee1454"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.5.14",
+    "@types/bun": "1.4.2",
+    "typescript": "5.9.3"
+  }
+}
