@@ -28,6 +28,7 @@ export const cc2340Options = z
         i2c_name: name,
         sda_source_port_id: sourcePortId,
         scl_source_port_id: sourcePortId,
+        /** Maximum bus bitrate in bits per second. */
         max_bit_rate: z.literal(100000),
         peripheral_assignment: z.enum(["suggested", "fixed"]),
       })

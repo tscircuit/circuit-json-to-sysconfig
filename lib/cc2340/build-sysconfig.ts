@@ -50,7 +50,8 @@ export function buildCc2340SysConfig(
     })
     config.addInstance({ name: "I2C1", moduleName: "I2C" })
     config.setValue("I2C1.$name", request.i2c_name)
-    config.setValue("I2C1.maxBitRate", request.max_bit_rate)
+    // Public API uses bits/s; the SimpleLink SDK property uses kbit/s.
+    config.setValue("I2C1.maxBitRate", request.max_bit_rate / 1000)
     config.setValue("I2C1.i2c.sdaPin.$assign", sda.identifier)
     config.setValue("I2C1.i2c.sclPin.$assign", scl.identifier)
     config.setValue(

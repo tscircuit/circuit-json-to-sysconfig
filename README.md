@@ -24,7 +24,9 @@ console.log(config.getString())
 Run `bun examples/pedometer/export.ts` to write `generated/pedometer.syscfg`.
 The example requests display isolation on DIO20 (initially High), charger low-power
 control on DIO3 (initially Low), accelerometer input on DIO12 (no pull/interrupt),
-and I2C SDA/SCL on DIO8/DIO6 at 100000 bit/s. Options refer to source-port IDs;
+and I2C SDA/SCL on DIO8/DIO6 at 100000 bit/s. The public `max_bit_rate` option
+uses **bits/s**; the exporter divides it by 1000 to write TI's `maxBitRate` in
+**kbit/s** (`100000` becomes the numeric value `100`). Options refer to source-port IDs;
 physical assignments come from Circuit JSON. Multiple GPIOs preserve request order.
 Input pull/interrupt and output startup levels are required, explicit choices.
 

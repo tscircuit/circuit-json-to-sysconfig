@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test"
 import { createHash } from "node:crypto"
 import { any_circuit_element, type CircuitJson } from "circuit-json"
-import { inspectSysConfig, parseSysConfig } from "sysconfigts"
+import { inspectSysConfig, parseSysConfig, SysConfigLiteral } from "sysconfigts"
 import { loadPedometerCircuit } from "../examples/pedometer/load-circuit"
 import { pedometerOptions } from "../examples/pedometer/options"
 import { cc2340Options } from "../lib/cc2340/options"
@@ -68,6 +68,34 @@ test("actual board emits three GPIOs and the exact I2C identifiers", () => {
   expect(inspectSysConfig(config)).toEqual(
     inspectSysConfig(parseSysConfig(text)),
   )
+})
+
+test("100000 bits/s becomes numeric 100 kbit/s through serialization and re-parsing", async () => {
+  const options = structuredClone(pedometerOptions)
+  expect(options.i2c?.max_bit_rate).toBe(100000)
+  const config = output(options)
+  const source = config.getString()
+  expect(source).toContain("I2C1.maxBitRate = 100;")
+  const reparsed = parseSysConfig(source)
+  expect(reparsed.getString()).toBe(source)
+  for (const document of [config, reparsed]) {
+    const assignment = document.getAssignment("I2C1.maxBitRate")
+    expect(assignment?.value).toBeInstanceOf(SysConfigLiteral)
+    if (!(assignment?.value instanceof SysConfigLiteral))
+      throw new Error("Expected numeric bitrate literal")
+    expect(assignment.value.value).toBe(100)
+  }
+  // The independently authored board reference must use the same SDK units.
+  const reference = parseSysConfig(
+    await Bun.file(
+      new URL("./fixtures/pedometer/v0.4.4-reference.syscfg", import.meta.url),
+    ).text(),
+  )
+  const assignment = reference.getAssignment("sensorBus.maxBitRate")
+  if (!(assignment?.value instanceof SysConfigLiteral))
+    throw new Error("Expected numeric reference bitrate literal")
+  expect(assignment.value.value).toBe(100)
+  expect(options.i2c?.max_bit_rate).toBe(100000)
 })
 
 test("firmware settings are explicit; omitted input/output settings fail", () => {

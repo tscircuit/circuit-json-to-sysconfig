@@ -74,6 +74,11 @@ Conflicting declarations and unsupported open-drain GPIO requests are rejected.
 I2C electrical-mode declarations remain unsupported pending TI verification.
 I2C0 is suggested in this example; callers can explicitly request a fixed assignment.
 Only the pin-3 SDA / pin-19 SCL route and 100000-bit/s setting are in this initial scope.
+The public `max_bit_rate` is in **bits/s**. The SDK's `maxBitRate` property is in
+**kbit/s**, so the exporter writes `100` for a `100000` request. The pinned
+[I2C metadata](https://github.com/TexasInstruments/simplelink-lowpower-f3-sdk/blob/c55fa9bae0ec71b103508afac4861d446204669b/source/ti/drivers/.meta/I2C.syscfg.js)
+and [header template](https://github.com/TexasInstruments/simplelink-lowpower-f3-sdk/blob/c55fa9bae0ec71b103508afac4861d446204669b/source/ti/drivers/.meta/i2c/I2C.Board.h.xdt)
+establish the units and rate-enum selection; this source inspection is not a TI execution result.
 
 ## Conflicts with the supplied reference
 
@@ -105,6 +110,11 @@ SHA-256: `d369b83da1501103629432624e6136fbdc12e3cd30808d22e604c5b4e1f51e7c`.
 It is an **unmatched historical/parser fixture**, transcribed from development
 notes, and is not a verified configuration for v0.4.4. Round-trip parsing is
 byte-identical. Neither the converter nor its expected board mapping uses it.
+Its `I2C1.maxBitRate = 100000` also has incorrect units for a 100-kbit/s bus:
+TI interprets that literal as kbit/s. The pinned SDK template selects the highest
+supported rate below that value, producing the incorrect 400-kHz selection.
+This historical error is intentionally preserved; only the v0.4.4 candidate and
+converter output use the corrected numeric value `100`.
 
 `v0.4.4-reference.syscfg` is a separately authored GPIO/I2C candidate based on
 the source traces, physical pin table, and explicit choices above. It must pass
@@ -134,6 +144,11 @@ SimpleLink outputs, then implement strict output comparisons and a separate CC23
 CI job. Also validate a changed-pin test circuit, GUI loading, and any proposed
 application preset. None of these checks is represented as passing by unit tests.
 The AM2434 workflow, fixtures, versions, and existing tests remain unchanged.
+CC2340 acceptance must inspect the generated GPIO electrical settings, exact
+pin/I2C assignments, and absence of unexpected display/debug allocations. Require
+`CONFIG_I2C_0_MAXSPEED` to resolve to `100U` and `CONFIG_I2C_0_MAXBITRATE` to
+`I2C_100kHz`; reject `I2C_400kHz`. These generated-output assertions and the dedicated
+CC2340 CI job remain pending the authorized real TI run.
 
 The adjacent `cc2340-pin-change` fixtures are a separate, minimal regression circuit,
 not a replacement pedometer. Both TSX sources were built with the same 0.0.2463
