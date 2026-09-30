@@ -1,11 +1,49 @@
 # circuit-json-to-sysconfig
 
-Convert one Circuit JSON GPIO request into a TI SysConfig document. The initial
-scope is **AM2434BSDFHIALVR**, ALV package, R5F core `r5fss0-0`, with output on
+Convert Circuit JSON GPIO/I2C requests into a TI SysConfig document. The verified
+AM2434 scope is **AM2434BSDFHIALVR**, ALV package, R5F core `r5fss0-0`, with output on
 ball **A7** (`MCU_GPIO0_5`) or **B7** (`MCU_GPIO0_6`). These mappings are documented and
-**real TI generation passed for all four validation inputs**. The planned CC2340 pedometer target is outside this PR.
+**real TI generation passed for all four validation inputs**. CC2340 support uses
+the actual **pedometer v0.4.4** source: three GPIOs and one I2C bus. Its unit tests
+pass; **CC2340 real TI validation is NOT RUN**, pending separate license approval.
 
-## Library usage
+## Pedometer v0.4.4 example
+
+```ts
+import { convertCircuitJsonToSysConfig } from "circuit-json-to-sysconfig"
+import { loadPedometerCircuit } from "./examples/pedometer/load-circuit"
+import { pedometerOptions } from "./examples/pedometer/options"
+
+const config = convertCircuitJsonToSysConfig(
+  await loadPedometerCircuit(),
+  pedometerOptions,
+)
+console.log(config.getString())
+```
+
+Run `bun examples/pedometer/export.ts` to write `generated/pedometer.syscfg`.
+The example requests display isolation on DIO20 (initially High), charger low-power
+control on DIO3 (initially Low), accelerometer input on DIO12 (no pull/interrupt),
+and I2C SDA/SCL on DIO8/DIO6 at 100000 bit/s. The public `max_bit_rate` option
+uses **bits/s**; the exporter divides it by 1000 to write TI's `maxBitRate` in
+**kbit/s** (`100000` becomes the numeric value `100`). Options refer to source-port IDs;
+physical assignments come from Circuit JSON. Multiple GPIOs preserve request order.
+Input pull/interrupt and output startup levels are required, explicit choices.
+
+Display bus/control and SWD ownership is declared in `reserved_ports`; overlap
+fails. Display SPI, D/C/reset behavior, firmware application presets, additional
+I2C routes, and automatic pin movement are unsupported. The example explicitly
+selects NoRTOS; no BLE/FreeRTOS/NVS application settings are copied. Unsupported
+fields/functions throw. This is GPIO/I2C support, not complete display support or
+a verified pedometer firmware application.
+
+See the single [pedometer provenance record](tests/fixtures/pedometer/README.md)
+for source hashes, source-build reproduction, exact pin mapping, four historical
+reference conflicts, TI prerequisites, and pending validation. The supplied
+reference remains unchanged and is labeled unmatched. A separate v0.4.4 reference
+candidate awaits independent TI execution before use as an expected hardware result.
+
+## AM2434 library usage
 
 ```ts
 import type { CircuitJson } from "circuit-json"
@@ -76,7 +114,7 @@ Fixed `$assign` settings remain distinct from `$suggestSolution` suggestions. It
 deterministic and does not modify the document or evaluate TI scripts/device defaults.
 Reviewed inline snapshots cover A7/B7 inspection and serialization/re-parsing.
 
-## Supported input
+## AM2434 supported input
 
 Select one `source_component` with `ftype: "simple_chip"` and the exact MPN above,
 and one `source_port` belonging to it. Physical identity follows the documented ALV
@@ -97,7 +135,7 @@ contain only `A-Z`, digits, and underscores; direction must be `"output"`.
 Conversion uses source records, independently of PCB routing. It constructs one
 GPIO instance and disables debug UART pin allocation. SDK system defaults supply
 required infrastructure; the native demo's UART and MPU settings are not copied.
-There is no multi-GPIO conversion, other peripheral support, automatic pin movement,
+The AM2434 API has no multi-GPIO conversion, other peripheral support, automatic pin movement,
 TSX compilation, user-facing CLI, or firmware application generation.
 
 See [target provenance](lib/targets/README.md) for the exact device/SDK mapping,
@@ -215,7 +253,7 @@ this workflow. Linux installer source:
 [official TI archive](https://software-dl.ti.com/ccs/esd/sysconfig/docs/release_archive.html);
 SHA-256: `0ff048df222151d34757aae3bec01ee586a85e1641dadeda7b227a7055b501b4`.
 
-## Verification status
+## AM2434 verification status
 
 - **Passed:** 127 tests and 2 reviewed inline snapshots, covering staged/wrapper
   equivalence, A7 → B7, malformed names, ball/alias conflicts, output inspection,

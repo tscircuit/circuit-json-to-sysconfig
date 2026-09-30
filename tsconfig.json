@@ -13,5 +13,5 @@
       "tests/*": ["./tests/*"]
     }
   },
-  "include": ["lib", "scripts", "tests"]
+  "include": ["lib", "scripts", "tests", "examples"]
 }

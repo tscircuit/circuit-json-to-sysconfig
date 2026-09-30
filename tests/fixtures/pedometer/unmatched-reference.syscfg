@@ -1,0 +1,109 @@
+/**
+ * These arguments were used when this file was generated. They will be automatically applied on subsequent loads
+ * via the GUI or CLI. Run CLI with '--help' for additional information on how to override these arguments.
+ * @cliArgs --device "CC2340R5RGE" --part "Default" --package "RGE" --rtos "freertos" --product "simplelink_lowpower_f3_sdk@9.21.00.36"
+ * @v2CliArgs --device "CC2340R5" --package "VQFN (RGE)" --rtos "freertos" --product "simplelink_lowpower_f3_sdk@9.21.00.36"
+ * @versions {"tool":"1.26.3+4558"}
+ */
+
+/**
+ * Import the modules used in this configuration.
+ */
+const FreeRTOS = scripting.addModule("/freertos/FreeRTOS");
+const ble = scripting.addModule("/ti/ble/ble");
+const CCFG = scripting.addModule("/ti/devices/CCFG");
+const rfdesign = scripting.addModule("/ti/devices/radioconfig/rfdesign");
+const GPIO = scripting.addModule("/ti/drivers/GPIO");
+const GPIO3 = GPIO.addInstance();
+const GPIO4 = GPIO.addInstance();
+const GPIO5 = GPIO.addInstance();
+const GPIO6 = GPIO.addInstance();
+const GPIO7 = GPIO.addInstance();
+const GPIO8 = GPIO.addInstance();
+const I2C = scripting.addModule("/ti/drivers/I2C", {}, false);
+const I2C1 = I2C.addInstance();
+const NVS = scripting.addModule("/ti/drivers/NVS");
+const NVS1 = NVS.addInstance();
+const Power = scripting.addModule("/ti/drivers/Power");
+const RCL = scripting.addModule("/ti/drivers/RCL");
+const RNG = scripting.addModule("/ti/drivers/RNG");
+const Settings = scripting.addModule("/ti/posix/freertos/Settings");
+
+/**
+ * Write custom configuration values to the imported modules.
+ */
+FreeRTOS.heapSize = 0x00004D50;
+FreeRTOS.timerTaskPriority = 9;
+FreeRTOS.timerStackSize = 0x00000190;
+FreeRTOS.idleStackSize = 0x00000130;
+
+ble.basicBLE = true;
+ble.disDevBySerUuid = true;
+ble.numOfAdvSets = 1;
+ble.deviceName = "Stride";
+ble.disableDisplayModule = true;
+ble.radioConfig.codeExportConfig.$name = "ti_devices_radioconfig_code_export_param0";
+ble.adcNoiseConfig.codeExportConfig.$name = "ti_devices_radioconfig_code_export_param1";
+ble.bleCsConfig.codeExportConfig.$name = "ti_devices_radioconfig_code_export_param2";
+ble.connUpdateParamsPeripheral.$name = "ti_ble_general_ble_conn_update_params0";
+ble.advSet1.$name = "ti_ble_broadcaster_advertisement_set0";
+ble.advSet1.advParam1.$name = "ti_ble_broadcaster_advertisement_params0";
+ble.advSet1.advData1.$name = "ti_ble_broadcaster_advertisement_data0";
+ble.advSet1.advData1.GAP_ADTYPE_16BIT_MORE = true;
+ble.advSet1.advData1.numOfUUIDs16More = 1;
+ble.advSet1.advData1.UUID016More = 0xFFF0;
+ble.advSet1.scanRes1.$name = "ti_ble_broadcaster_advertisement_data1";
+ble.advSet1.scanRes1.GAP_ADTYPE_PERIPHERAL_CONN_INTERVAL_RANGE = true;
+ble.rng.$name = "CONFIG_RNG_0";
+ble.aesccm.$name = "CONFIG_AESCCM_0";
+ble.ecdh.$name = "CONFIG_ECDH_0";
+ble.aesctrdrbg.$name = "CONFIG_AESCTRDRBG_0";
+ble.aesecb.$name = "CONFIG_AESECB_0";
+
+CCFG.ccfgTemplate.$name = "ti_devices_CCFG_CCFGCC23X0Template0";
+
+GPIO3.$name = "CONFIG_DISPLAY_ISOLATE";
+GPIO3.mode = "Output";
+GPIO3.initialOutputState = "High";
+GPIO3.gpioPin.$assign = "DIO20_A11";
+
+GPIO4.$name = "CONFIG_PMIC_LP";
+GPIO4.mode = "Output";
+GPIO4.gpioPin.$assign = "DIO11";
+
+GPIO5.$name = "CONFIG_ACCEL_INT";
+GPIO5.gpioPin.$assign = "DIO12";
+
+GPIO6.$name = "CONFIG_PMIC_INT";
+GPIO6.gpioPin.$assign = "DIO13";
+
+GPIO7.$name = "CONFIG_GAUGE_INT";
+GPIO7.gpioPin.$assign = "DIO21_A10";
+
+GPIO8.$name = "CONFIG_BUTTON";
+GPIO8.interruptTrigger = "Falling Edge";
+GPIO8.gpioPin.$assign = "DIO24_A7";
+
+I2C1.$name = "CONFIG_I2C_0";
+I2C1.maxBitRate = 100000;
+I2C1.i2c.sdaPin.$assign = "DIO8";
+I2C1.i2c.sclPin.$assign = "DIO6_A1_AR+";
+
+NVS1.$name = "CONFIG_NVSINTERNAL";
+NVS1.internalFlash.$name = "ti_drivers_nvs_NVSLPF30";
+NVS1.internalFlash.regionBase = 0x7D000;
+NVS1.internalFlash.regionSize = 0x3000;
+
+RNG.rngReturnBehavior = "RNG_RETURN_BEHAVIOR_BLOCKING";
+
+const AESCommonXXF3 = scripting.addModule("/ti/drivers/cryptoutils/aes/AESCommonXXF3", {}, false);
+AESCommonXXF3.laes.$assign = "LAES";
+AESCommonXXF3.laes.dataLaesChannelA.$assign = "DMA_CH4";
+AESCommonXXF3.laes.dataLaesChannelB.$assign = "DMA_CH5";
+
+/**
+ * Pinmux solution for unlocked pins/peripherals. This ensures that minor changes to the automatic solver in a future
+ * version of the tool will not impact the pinmux you originally saw. These lines can be completely deleted in order to
+ * re-solve from scratch.
+ */
+I2C1.i2c.$suggestSolution = "I2C0";
