@@ -1,8 +1,9 @@
 # Pedometer v0.4.4 provenance and scope
 
-Status: source build and library tests pass. **CC2340 TI validation NOT RUN**;
-SysConfig 1.26.3+4558 installation is waiting for separate license authorization.
-No GUI, firmware compilation, or hardware validation has been performed.
+Status: source build, library tests, **real CC2340 TI generation and CCS GUI
+validation pass** with SysConfig 1.28.1+4785 / SimpleLink F3 SDK 9.21.00.36.
+The generated driver/device C files compile individually with TI ARM Clang
+5.1.1.LTS for Cortex-M0+. No complete firmware link or hardware test was performed.
 
 ## Frozen input
 
@@ -117,38 +118,48 @@ This historical error is intentionally preserved; only the v0.4.4 candidate and
 converter output use the corrected numeric value `100`.
 
 `v0.4.4-reference.syscfg` is a separately authored GPIO/I2C candidate based on
-the source traces, physical pin table, and explicit choices above. It must pass
-independent TI generation **before** becoming an expected hardware result. Unit
-tests currently check explicit mapping literals and text inspection, not claimed
-equivalence to a TI-validated reference.
+the source traces, physical pin table, and explicit choices above. It remains
+unchanged as the original candidate. Real TI inspection exposed two missing
+settings: the default external LF crystal conflicts with the board's DIO3/DIO4
+use, and default LaunchPad flash startup drives display pins 11/24/13/21.
 
-The example explicitly selects `firmware: { rtos: "nortos" }`. No BLE, FreeRTOS,
+`v0.4.4-ccs-1.28.1.syscfg` was produced by opening a copy of that candidate in CCS
+21.0.1, selecting **LF RCOSC**, disabling Board **Generate Initialization
+Functions**, and saving through the SysConfig GUI. The GUI reported no problems.
+It preserves TI's saved source, including its tool version. The converter's
+`ti_drivers_config.c`, `ti_drivers_config.h`, and `ti_devices_config.c` match the
+reference's real TI output byte-for-byte. The CLI-built original TSX also produces
+the same three files. Generated output was not manually patched.
+
+The example explicitly selects
+`firmware: { rtos: "nortos", lf_clock_source: "lf_rcosc" }`. No BLE, FreeRTOS,
 NVS, radio, AES, or DMA application settings are copied. The historical settings
 remain in their parser fixture. An application preset is deferred until its
 compatibility and resource reservations can be checked with the matching TI
 environment; requests for one are rejected. This avoids presenting unchecked
 application settings as universal CC2340 defaults.
 
-## Pending TI work
+## Real TI validation
 
-Required environment: **SysConfig 1.26.3+4558** and **SimpleLink F3 SDK 9.21.00.36**.
+Validated environment: **SysConfig 1.28.1+4785**, **CCS 21.0.1**, and
+**SimpleLink F3 SDK 9.21.00.36** on macOS arm64, using the installed CCS tools.
 The official SDK tag `lpf3-9.21.00.36_LTS` resolves to
 `c55fa9bae0ec71b103508afac4861d446204669b`; its metadata declares minimum tool
 version 1.26.3 and includes `nortos`. SDK GPIO metadata declares Input, Low,
 None pull, and None interrupt defaults, but this example writes its relevant
 settings explicitly.
 
-After separate TI license approval: execute the unmatched native/round-trip inputs
-for diagnostics, independently validate the new candidate, inspect the actual
-SimpleLink outputs, then implement strict output comparisons and a separate CC2340
-CI job. Also validate a changed-pin test circuit, GUI loading, and any proposed
-application preset. None of these checks is represented as passing by unit tests.
-The AM2434 workflow, fixtures, versions, and existing tests remain unchanged.
-CC2340 acceptance must inspect the generated GPIO electrical settings, exact
-pin/I2C assignments, and absence of unexpected display/debug allocations. Require
-`CONFIG_I2C_0_MAXSPEED` to resolve to `100U` and `CONFIG_I2C_0_MAXBITRATE` to
-`I2C_100kHz`; reject `I2C_400kHz`. These generated-output assertions and the dedicated
-CC2340 CI job remain pending the authorized real TI run.
+Run `bun run validate:cc2340` with the three TI environment variables documented
+in the root README. It checks the generated GPIO electrical settings, exact
+I2C pin/mux assignments, reserved display/debug pins, and internal LF clock.
+`CONFIG_I2C_0_MAXSPEED` must be `100U` and `CONFIG_I2C_0_MAXBITRATE` must select
+`I2C_100kHz`, not `I2C_400kHz`. It rejects LaunchPad flash routines and compares
+all three generated C/header files to the CCS-saved reference, then runs both
+pin-change fixtures through real TI. All four TI inputs pass.
+
+SysConfig 1.26.3 (the version listed in the SDK release notes), full application
+presets, a dedicated CC2340 CI installation job, and hardware operation remain
+unverified. The existing AM2434 CI workflow and historical references are unchanged.
 
 The adjacent `cc2340-pin-change` fixtures are a separate, minimal regression circuit,
 not a replacement pedometer. Both TSX sources were built with the same 0.0.2463
@@ -156,6 +167,6 @@ compiler and command above (using `pin-change.circuit.tsx` as the filename), exi
 0. Changing only the TSX pin label from pin5/DIO12 to pin6/DIO13 regenerated the
 stored JSON; identical converter options then resolve the new GPIO pin. No JSON
 was hand-edited and the frozen v0.4.4 wiring was not changed. Real TI validation of
-both variants remains NOT RUN. To reproduce, copy either `.tsx.txt` source into
+both variants passes in `validate:cc2340`. To reproduce, copy either `.tsx.txt` source into
 the extracted source directory as `pin-change.circuit.tsx`, run the compiler, and
 inspect `dist/pin-change/circuit.json`.

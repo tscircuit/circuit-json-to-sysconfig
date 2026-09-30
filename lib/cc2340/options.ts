@@ -44,7 +44,12 @@ export const cc2340Options = z
         .strict(),
     ),
     // No application preset is implicit. Additional RTOS/application support requires TI validation.
-    firmware: z.object({ rtos: z.literal("nortos") }).strict(),
+    firmware: z
+      .object({
+        rtos: z.literal("nortos"),
+        lf_clock_source: z.enum(["lf_rcosc", "lf_xosc"]).optional(),
+      })
+      .strict(),
   })
   .strict()
   .refine((options) => options.gpios.length > 0 || options.i2c !== undefined, {

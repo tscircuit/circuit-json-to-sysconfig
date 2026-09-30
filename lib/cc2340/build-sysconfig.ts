@@ -14,6 +14,19 @@ export function buildCc2340SysConfig(
 ): SysConfig {
   const { target } = resolved
   const config = new SysConfig()
+  // This target describes a custom device, not a TI LaunchPad. Its board-specific
+  // external-flash startup would otherwise drive unrelated display pins.
+  config.addModule({ name: "Board", modulePath: "/ti/drivers/Board" })
+  config.setValue("Board.generateInitializationFunctions", false)
+  if (resolved.options.firmware.lf_clock_source) {
+    config.addModule({ name: "CCFG", modulePath: "/ti/devices/CCFG" })
+    config.setValue(
+      "CCFG.srcClkLF",
+      resolved.options.firmware.lf_clock_source === "lf_rcosc"
+        ? "LF RCOSC"
+        : "LF XOSC",
+    )
+  }
   if (resolved.gpios.length)
     config.addModule({ name: "GPIO", modulePath: "/ti/drivers/GPIO" })
   for (const [index, { request, pin }] of resolved.gpios.entries()) {
