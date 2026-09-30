@@ -1,6 +1,6 @@
 import { source_simple_chip } from "circuit-json"
 import type { ConvertContext } from "../ConvertContext"
-import { resolveTiTarget } from "../targets/am2434bsdfhialvr"
+import { resolveTiTarget } from "../targets/resolve-ti-target"
 
 export function resolveTargetStage(ctx: ConvertContext): void {
   const components = ctx.circuitJson.filter(

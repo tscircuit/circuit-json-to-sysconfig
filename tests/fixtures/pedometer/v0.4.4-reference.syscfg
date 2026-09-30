@@ -1,0 +1,36 @@
+/**
+ * Independently authored GPIO/I2C reference for pedometer v0.4.4.
+ * TI validation NOT RUN: this is a candidate, not yet a verified expectation.
+ * @cliArgs --device "CC2340R5RGE" --part "Default" --package "RGE" --rtos "nortos" --product "simplelink_lowpower_f3_sdk@9.21.00.36"
+ * @v2CliArgs --device "CC2340R5" --package "VQFN (RGE)" --rtos "nortos" --product "simplelink_lowpower_f3_sdk@9.21.00.36"
+ */
+const GPIO = scripting.addModule("/ti/drivers/GPIO");
+const displayPower = GPIO.addInstance();
+displayPower.$name = "CONFIG_DISPLAY_ISOLATE";
+displayPower.mode = "Output";
+displayPower.initialOutputState = "High";
+displayPower.outputType = "Standard";
+displayPower.pull = "None";
+displayPower.interruptTrigger = "None";
+displayPower.gpioPin.$assign = "DIO20_A11";
+const chargerLowPower = GPIO.addInstance();
+chargerLowPower.$name = "CONFIG_PMIC_LP";
+chargerLowPower.mode = "Output";
+chargerLowPower.initialOutputState = "Low";
+chargerLowPower.outputType = "Standard";
+chargerLowPower.pull = "None";
+chargerLowPower.interruptTrigger = "None";
+chargerLowPower.gpioPin.$assign = "DIO3_X32P";
+const accelerometer = GPIO.addInstance();
+accelerometer.$name = "CONFIG_ACCEL_INT";
+accelerometer.mode = "Input";
+accelerometer.pull = "None";
+accelerometer.interruptTrigger = "None";
+accelerometer.gpioPin.$assign = "DIO12";
+const I2C = scripting.addModule("/ti/drivers/I2C", {}, false);
+const sensorBus = I2C.addInstance();
+sensorBus.$name = "CONFIG_I2C_0";
+sensorBus.maxBitRate = 100000;
+sensorBus.i2c.sdaPin.$assign = "DIO8";
+sensorBus.i2c.sclPin.$assign = "DIO6_A1_AR+";
+sensorBus.i2c.$suggestSolution = "I2C0";

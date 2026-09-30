@@ -1,10 +1,15 @@
 import { SysConfig, SysConfigTrivia } from "sysconfigts"
 import type { ConvertContext } from "../ConvertContext"
+import { buildCc2340SysConfig } from "../cc2340/build-sysconfig"
 import { addGpioConfiguration } from "../gpio/add-gpio-configuration"
 
 export function buildSysConfigStage(ctx: ConvertContext): void {
+  if (ctx.cc2340Requests) {
+    ctx.config = buildCc2340SysConfig(ctx.cc2340Requests)
+    return
+  }
   const { target, gpioRequest } = ctx
-  if (!target || !gpioRequest)
+  if (target?.manufacturer_part_number !== "AM2434BSDFHIALVR" || !gpioRequest)
     throw new Error(
       "Resolve the target and GPIO request before building SysConfig",
     )

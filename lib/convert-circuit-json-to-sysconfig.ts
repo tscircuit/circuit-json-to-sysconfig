@@ -1,9 +1,9 @@
 import type { CircuitJson } from "circuit-json"
 import type { SysConfig } from "sysconfigts"
 import { CircuitJsonToSysConfigConverter } from "./CircuitJsonToSysConfigConverter"
-import type { GpioRequest } from "./gpio/resolve-gpio-request"
+import type { ConvertOptions } from "./ConvertContext"
 
-export type ConvertCircuitJsonToSysConfigOptions = GpioRequest
+export type ConvertCircuitJsonToSysConfigOptions = ConvertOptions
 
 export function convertCircuitJsonToSysConfig(
   circuitJson: CircuitJson,
