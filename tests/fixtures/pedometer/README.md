@@ -68,6 +68,10 @@ resolution; any numeric/DIO aliases must agree. The source does not declare
 active pin functions, so firmware behavior is supplied explicitly in the example.
 Output GPIOs use standard push-pull, no pull, and no interrupt. Input pull and
 interrupt settings are mandatory. The `_INT` suffix never selects an interrupt.
+Declared internal pull-up/pull-down flags are accepted when they agree with the
+input request, and declared push-pull is accepted for standard GPIO output.
+Conflicting declarations and unsupported open-drain GPIO requests are rejected.
+I2C electrical-mode declarations remain unsupported pending TI verification.
 I2C0 is suggested in this example; callers can explicitly request a fixed assignment.
 Only the pin-3 SDA / pin-19 SCL route and 100000-bit/s setting are in this initial scope.
 

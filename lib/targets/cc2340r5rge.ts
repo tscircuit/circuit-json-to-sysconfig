@@ -5,6 +5,7 @@ export const cc2340r5rge = {
   package: "RGE",
   part: "Default",
   product: "simplelink_lowpower_f3_sdk@9.21.00.36",
+  v2: { device: "CC2340R5", package: "VQFN (RGE)" },
   gpioPins: [
     { pin: 3, identifier: "DIO8", aliases: ["DIO8"] },
     { pin: 4, identifier: "DIO11", aliases: ["DIO11"] },
@@ -24,3 +25,4 @@ export const cc2340r5rge = {
 } as const
 
 export type Cc2340Pin = (typeof cc2340r5rge.gpioPins)[number]
+export type Cc2340Target = typeof cc2340r5rge

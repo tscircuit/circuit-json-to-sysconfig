@@ -1,5 +1,6 @@
 import { type CircuitJson, type SourcePort, source_port } from "circuit-json"
-import { type Cc2340Pin, cc2340r5rge } from "../targets/cc2340r5rge"
+import type { Cc2340Pin, Cc2340Target } from "../targets/cc2340r5rge"
+import type { Cc2340GpioRequest } from "./options"
 
 export interface ResolvedCc2340Port {
   port: SourcePort
@@ -8,7 +9,11 @@ export interface ResolvedCc2340Port {
 
 export function resolveCc2340Port(
   source_port_id: string,
-  ctx: { circuitJson: CircuitJson; source_component_id: string },
+  ctx: {
+    circuitJson: CircuitJson
+    source_component_id: string
+    target: Cc2340Target
+  },
 ): ResolvedCc2340Port {
   const ports = ctx.circuitJson.filter(
     (element) => element.type === "source_port",
@@ -23,7 +28,7 @@ export function resolveCc2340Port(
     throw new Error(
       `source_port ${source_port_id} does not belong to MCU ${ctx.source_component_id}`,
     )
-  const pin = cc2340r5rge.gpioPins.find((pin) => pin.pin === port.pin_number)
+  const pin = ctx.target.gpioPins.find((pin) => pin.pin === port.pin_number)
   if (!pin)
     throw new Error(
       `Unsupported CC2340 physical pin ${port.pin_number}; a supported numeric RGE pin is required`,
@@ -70,9 +75,10 @@ export function resolveCc2340Port(
 
 export function checkCc2340Function(
   resolved: ResolvedCc2340Port,
-  role: "gpio" | "sda" | "scl",
+  request: Cc2340GpioRequest | "sda" | "scl",
 ) {
   const { port } = resolved
+  const role = typeof request === "string" ? request : "gpio"
   const forbidden: (keyof SourcePort)[] = [
     "is_configured_for_spi_mosi",
     "is_configured_for_spi_miso",
@@ -85,11 +91,24 @@ export function checkCc2340Function(
     "requires_power",
     "provides_ground",
     "requires_ground",
-    "is_using_internal_pullup",
-    "is_using_internal_pulldown",
     "is_using_open_drain",
-    "is_using_push_pull",
   ]
+  // I2C electrical declarations remain unsupported until verified against TI.
+  // A GPIO declaration is compatible only if the emitted configuration agrees.
+  if (
+    typeof request === "string" ||
+    request.direction !== "input" ||
+    request.pull !== "up"
+  )
+    forbidden.push("is_using_internal_pullup")
+  if (
+    typeof request === "string" ||
+    request.direction !== "input" ||
+    request.pull !== "down"
+  )
+    forbidden.push("is_using_internal_pulldown")
+  if (typeof request === "string" || request.direction !== "output")
+    forbidden.push("is_using_push_pull")
   if (role !== "sda") forbidden.push("is_configured_for_i2c_sda")
   if (role !== "scl") forbidden.push("is_configured_for_i2c_scl")
   const conflict = forbidden.find((attribute) => port[attribute] === true)

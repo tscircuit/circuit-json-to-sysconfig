@@ -10,7 +10,10 @@ export function resolveGpioStage(ctx: ConvertContext): void {
       throw new Error(
         "Multiple GPIO/I2C requests currently require CC2340R52E0RGER",
       )
-    ctx.cc2340Requests = resolveCc2340Requests(ctx.options, ctx.circuitJson)
+    ctx.cc2340Requests = resolveCc2340Requests(ctx.options, {
+      circuitJson: ctx.circuitJson,
+      target: ctx.target,
+    })
     return
   }
   if (ctx.target.manufacturer_part_number !== "AM2434BSDFHIALVR")

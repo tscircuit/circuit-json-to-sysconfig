@@ -1,5 +1,4 @@
 import { SysConfig, SysConfigTrivia } from "sysconfigts"
-import { cc2340r5rge } from "../targets/cc2340r5rge"
 import type { ResolvedCc2340Requests } from "./resolve-requests"
 
 const pulls = { none: "None", up: "Pull Up", down: "Pull Down" } as const
@@ -13,6 +12,7 @@ const interrupts = {
 export function buildCc2340SysConfig(
   resolved: ResolvedCc2340Requests,
 ): SysConfig {
+  const { target } = resolved
   const config = new SysConfig()
   if (resolved.gpios.length)
     config.addModule({ name: "GPIO", modulePath: "/ti/drivers/GPIO" })
@@ -55,12 +55,12 @@ export function buildCc2340SysConfig(
     config.setValue("I2C1.i2c.sclPin.$assign", scl.identifier)
     config.setValue(
       `I2C1.i2c.${request.peripheral_assignment === "fixed" ? "$assign" : "$suggestSolution"}`,
-      cc2340r5rge.i2c.peripheral,
+      target.i2c.peripheral,
     )
   }
   config.nodes.unshift(
     new SysConfigTrivia({
-      text: `/**\n * @cliArgs --device "CC2340R5RGE" --part "Default" --package "RGE" --rtos "${resolved.options.firmware.rtos}" --product "simplelink_lowpower_f3_sdk@9.21.00.36"\n * @v2CliArgs --device "CC2340R5" --package "VQFN (RGE)" --rtos "${resolved.options.firmware.rtos}" --product "simplelink_lowpower_f3_sdk@9.21.00.36"\n */\n`,
+      text: `/**\n * @cliArgs --device "${target.device}" --part "${target.part}" --package "${target.package}" --rtos "${resolved.options.firmware.rtos}" --product "${target.product}"\n * @v2CliArgs --device "${target.v2.device}" --package "${target.v2.package}" --rtos "${resolved.options.firmware.rtos}" --product "${target.product}"\n */\n`,
     }),
   )
   return config

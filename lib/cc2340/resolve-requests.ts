@@ -1,5 +1,5 @@
 import type { CircuitJson } from "circuit-json"
-import { type Cc2340Pin, cc2340r5rge } from "../targets/cc2340r5rge"
+import type { Cc2340Pin, Cc2340Target } from "../targets/cc2340r5rge"
 import {
   type Cc2340GpioRequest,
   type Cc2340Options,
@@ -8,6 +8,7 @@ import {
 import { checkCc2340Function, resolveCc2340Port } from "./resolve-port"
 
 export interface ResolvedCc2340Requests {
+  target: Cc2340Target
   options: Cc2340Options
   gpios: { request: Cc2340GpioRequest; pin: Cc2340Pin }[]
   i2c?: {
@@ -19,44 +20,48 @@ export interface ResolvedCc2340Requests {
 
 export function resolveCc2340Requests(
   options: Cc2340Options,
-  circuitJson: CircuitJson,
+  ctx: { circuitJson: CircuitJson; target: Cc2340Target },
 ): ResolvedCc2340Requests {
   const validated = cc2340Options.parse(options)
-  const ctx = {
-    circuitJson,
+  const portContext = {
+    ...ctx,
     source_component_id: validated.source_component_id,
   }
   const usedPins = new Set<number>()
   const names = new Set<string>()
   for (const reserved of validated.reserved_ports) {
-    const { pin } = resolveCc2340Port(reserved.source_port_id, ctx)
+    const { pin } = resolveCc2340Port(reserved.source_port_id, portContext)
     if (usedPins.has(pin.pin))
       throw new Error(`Duplicate reserved physical pin ${pin.pin}`)
     usedPins.add(pin.pin)
   }
   const gpios = validated.gpios.map((request) => {
-    const resolved = resolveCc2340Port(request.source_port_id, ctx)
-    checkCc2340Function(resolved, "gpio")
+    const resolved = resolveCc2340Port(request.source_port_id, portContext)
+    checkCc2340Function(resolved, request)
     claimPin(resolved.pin, usedPins)
     claimName(request.gpio_name, names)
     return { request, pin: resolved.pin }
   })
-  const resolved: ResolvedCc2340Requests = { options: validated, gpios }
+  const resolved: ResolvedCc2340Requests = {
+    target: ctx.target,
+    options: validated,
+    gpios,
+  }
   if (validated.i2c) {
     const request = validated.i2c
-    const sda = resolveCc2340Port(request.sda_source_port_id, ctx)
-    const scl = resolveCc2340Port(request.scl_source_port_id, ctx)
+    const sda = resolveCc2340Port(request.sda_source_port_id, portContext)
+    const scl = resolveCc2340Port(request.scl_source_port_id, portContext)
     checkCc2340Function(sda, "sda")
     checkCc2340Function(scl, "scl")
     claimPin(sda.pin, usedPins)
     claimPin(scl.pin, usedPins)
     claimName(request.i2c_name, names)
     if (
-      !cc2340r5rge.i2c.sdaPins.some((pin) => pin === sda.pin.pin) ||
-      !cc2340r5rge.i2c.sclPins.some((pin) => pin === scl.pin.pin)
+      !ctx.target.i2c.sdaPins.some((pin) => pin === sda.pin.pin) ||
+      !ctx.target.i2c.sclPins.some((pin) => pin === scl.pin.pin)
     )
       throw new Error(
-        "Unsupported I2C0 pin pair; this scope supports SDA pin 3 and SCL pin 19",
+        `Unsupported ${ctx.target.i2c.peripheral} pin pair; this scope supports SDA pin ${ctx.target.i2c.sdaPins.join(", ")} and SCL pin ${ctx.target.i2c.sclPins.join(", ")}`,
       )
     resolved.i2c = { request, sda: sda.pin, scl: scl.pin }
   }
