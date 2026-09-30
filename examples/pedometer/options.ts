@@ -50,5 +50,5 @@ export const pedometerOptions: Cc2340Options = {
     { source_port_id: "source_port_101", reason: "SWDIO: debug ownership" },
     { source_port_id: "source_port_102", reason: "SWDCK: debug ownership" },
   ],
-  firmware: { rtos: "nortos" },
+  firmware: { rtos: "nortos", lf_clock_source: "lf_rcosc" },
 }

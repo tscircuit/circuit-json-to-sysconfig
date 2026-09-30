@@ -5,7 +5,9 @@ AM2434 scope is **AM2434BSDFHIALVR**, ALV package, R5F core `r5fss0-0`, with out
 ball **A7** (`MCU_GPIO0_5`) or **B7** (`MCU_GPIO0_6`). These mappings are documented and
 **real TI generation passed for all four validation inputs**. CC2340 support uses
 the actual **pedometer v0.4.4** source: three GPIOs and one I2C bus. Its unit tests
-pass; **CC2340 real TI validation is NOT RUN**, pending separate license approval.
+pass; **CC2340 real TI generation and CCS GUI validation pass** with SysConfig
+1.28.1+4785 and SimpleLink F3 SDK 9.21.00.36. This is configuration validation,
+not a complete firmware build or hardware test.
 
 ## Pedometer v0.4.4 example
 
@@ -33,15 +35,37 @@ Input pull/interrupt and output startup levels are required, explicit choices.
 Display bus/control and SWD ownership is declared in `reserved_ports`; overlap
 fails. Display SPI, D/C/reset behavior, firmware application presets, additional
 I2C routes, and automatic pin movement are unsupported. The example explicitly
-selects NoRTOS; no BLE/FreeRTOS/NVS application settings are copied. Unsupported
+selects NoRTOS and `firmware.lf_clock_source: "lf_rcosc"`; DIO3/DIO4 are used by
+the board, so the SDK's external LF crystal default is incompatible. A request
+or reservation on either crystal pin requires the explicit internal clock choice.
+`"lf_xosc"` is also supported when those pins are free; omission preserves the
+SDK default only when neither pin is claimed. Device-only CC2340 conversion
+disables TI LaunchPad-specific board initialization, which otherwise drives
+unrelated display pins to shut down a LaunchPad flash chip.
+No BLE/FreeRTOS/NVS application settings are copied. Unsupported
 fields/functions throw. This is GPIO/I2C support, not complete display support or
 a verified pedometer firmware application.
 
 See the single [pedometer provenance record](tests/fixtures/pedometer/README.md)
 for source hashes, source-build reproduction, exact pin mapping, four historical
-reference conflicts, TI prerequisites, and pending validation. The supplied
-reference remains unchanged and is labeled unmatched. A separate v0.4.4 reference
-candidate awaits independent TI execution before use as an expected hardware result.
+reference conflicts, TI prerequisites, and validation results. The supplied
+reference remains unchanged and is labeled unmatched. The separate
+`v0.4.4-ccs-1.28.1.syscfg` reference was saved through CCS after configuring the
+clock and board initialization. Its generated C and header files match the
+converter output byte-for-byte.
+
+### Reproduce the CC2340 TI checks
+
+Use an existing licensed SysConfig **1.28.1+4785** installation and the official
+SimpleLink F3 SDK source at `c55fa9bae0ec71b103508afac4861d446204669b`
+(tag `lpf3-9.21.00.36_LTS`). Set `TI_SYSCONFIG_NODE`, `TI_SYSCONFIG_CLI`, and
+`TI_SDK_ROOT` as described below, then run `bun run validate:cc2340`.
+The runner checks GPIO electrical settings, I2C pins/mux/rate, reserved display
+and debug pins, internal LF clock, absence of LaunchPad flash routines, exact
+CCS reference C/header parity, and real TI output for the DIO12-to-DIO13 fixture
+change. It preserves its temporary inputs/outputs and prints their location.
+The SDK release notes list SysConfig 1.26.3; that older version has not been
+tested in this validation. The existing automated TI CI job remains AM2434-only.
 
 ## AM2434 library usage
 

@@ -18,7 +18,8 @@
     "typecheck": "tsc --noEmit",
     "format": "biome check --write .",
     "format:check": "biome check .",
-    "validate:ti": "bun scripts/validate-ti-reference.ts"
+    "validate:ti": "bun scripts/validate-ti-reference.ts",
+    "validate:cc2340": "bun scripts/validate-cc2340.ts"
   },
   "dependencies": {
     "circuit-json": "0.0.506",

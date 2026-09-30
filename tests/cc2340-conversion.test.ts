@@ -124,6 +124,38 @@ test("firmware settings are explicit; omitted input/output settings fail", () =>
     ).toThrow()
 })
 
+test("custom CC2340 startup excludes LaunchPad flash and selects the requested LF clock", () => {
+  const text = output().getString()
+  expect(text).toContain('scripting.addModule("/ti/drivers/Board")')
+  expect(text).toContain("Board.generateInitializationFunctions = false;")
+  expect(text).toContain('CCFG.srcClkLF = "LF RCOSC";')
+  expect(parseSysConfig(text).getString()).toBe(text)
+})
+
+test("requested or reserved crystal pins require an explicit internal LF clock", () => {
+  for (const lf_clock_source of [undefined, "lf_xosc"] as const) {
+    const options = structuredClone(pedometerOptions)
+    options.firmware = { rtos: "nortos", lf_clock_source }
+    // The PMIC GPIO uses DIO3_X32P.
+    expect(() => output(options)).toThrow('lf_clock_source must be "lf_rcosc"')
+    options.gpios = []
+    // The display reset reservation independently owns DIO4_X32N.
+    expect(() => output(options)).toThrow('lf_clock_source must be "lf_rcosc"')
+  }
+})
+
+test("external LF crystal is allowed when neither crystal pin is claimed", () => {
+  const options = structuredClone(pedometerOptions)
+  options.gpios = options.gpios.filter(
+    (request) => request.gpio_name !== "CONFIG_PMIC_LP",
+  )
+  options.reserved_ports = []
+  options.firmware.lf_clock_source = "lf_xosc"
+  expect(output(options).getString()).toContain('CCFG.srcClkLF = "LF XOSC";')
+  delete options.firmware.lf_clock_source
+  expect(output(options).getString()).not.toContain("CCFG.srcClkLF")
+})
+
 test("GPIO choices and fixed I2C assignment are serialized explicitly", () => {
   const options = structuredClone(pedometerOptions)
   options.gpios = [

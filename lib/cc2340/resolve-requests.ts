@@ -65,6 +65,14 @@ export function resolveCc2340Requests(
       )
     resolved.i2c = { request, sda: sda.pin, scl: scl.pin }
   }
+  if (
+    (usedPins.has(14) || usedPins.has(15)) &&
+    validated.firmware.lf_clock_source !== "lf_rcosc"
+  ) {
+    throw new Error(
+      'DIO3_X32P/DIO4_X32N are requested or reserved; firmware.lf_clock_source must be "lf_rcosc" to avoid the SDK default external LF crystal using these pins',
+    )
+  }
   return resolved
 }
 
