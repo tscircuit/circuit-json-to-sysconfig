@@ -24,6 +24,11 @@ const incompatibleAttributes = [
   "is_configured_for_uart_tx",
   "is_configured_for_uart_rx",
   "do_not_connect",
+  "do_not_configure",
+  "is_input",
+  "is_using_tri_state",
+  "is_using_open_collector",
+  "is_using_open_emitter",
   "provides_power",
   "requires_power",
   "provides_ground",
@@ -71,6 +76,15 @@ export function resolveGpioRequest(
     )
   }
   const port = source_port.parse(selectedPort)
+  if (
+    port.initial_output_state !== undefined ||
+    port.interrupt_trigger !== undefined ||
+    port.i2c_max_bit_rate !== undefined ||
+    port.is_output === false
+  )
+    throw new Error(
+      `source_port ${port.source_port_id}: the legacy AM2434 request cannot represent declared firmware settings`,
+    )
   if (port.source_component_id !== request.source_component_id) {
     throw new Error(
       `source_port ${port.source_port_id} does not belong to MCU ${request.source_component_id}`,

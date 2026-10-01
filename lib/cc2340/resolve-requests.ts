@@ -51,6 +51,17 @@ export function resolveCc2340Requests(
     const request = validated.i2c
     const sda = resolveCc2340Port(request.sda_source_port_id, portContext)
     const scl = resolveCc2340Port(request.scl_source_port_id, portContext)
+    if (sda.port.i2c_max_bit_rate !== undefined)
+      throw new Error(
+        `source_port ${sda.port.source_port_id}: i2c_max_bit_rate belongs on the SCL pin`,
+      )
+    if (
+      scl.port.i2c_max_bit_rate !== undefined &&
+      scl.port.i2c_max_bit_rate !== request.max_bit_rate
+    )
+      throw new Error(
+        `source_port ${scl.port.source_port_id}: i2c_max_bit_rate conflicts with the request`,
+      )
     checkCc2340Function(sda, "sda")
     checkCc2340Function(scl, "scl")
     claimPin(sda.pin, usedPins)
