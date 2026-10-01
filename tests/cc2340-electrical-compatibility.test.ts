@@ -136,25 +136,44 @@ test("a matching declaration does not hide contradictory electrical declarations
   ).toThrow("is_using_open_drain conflicts")
 })
 
-test("GPIO electrical compatibility does not accept unsupported I2C electrical declarations", () => {
+test("I2C accepts open-drain SDA and SCL without changing the TI configuration", () => {
+  const declared = structuredClone(circuit)
+  for (const source_port_id of ["source_port_97", "source_port_113"]) {
+    const port = declared.find(
+      (element) =>
+        element.type === "source_port" &&
+        element.source_port_id === source_port_id,
+    )
+    if (port?.type !== "source_port")
+      throw new Error("Missing I2C fixture port")
+    port.is_using_open_drain = true
+  }
+  expect(
+    convertCircuitJsonToSysConfig(declared, pedometerOptions).getString(),
+  ).toBe(convertCircuitJsonToSysConfig(circuit, pedometerOptions).getString())
+})
+
+test("open-drain I2C still rejects conflicting electrical declarations on either pin", () => {
   const attributes: ElectricalAttribute[] = [
     "is_using_internal_pullup",
     "is_using_internal_pulldown",
     "is_using_push_pull",
-    "is_using_open_drain",
   ]
-  for (const attribute of attributes) {
-    const declared = structuredClone(circuit)
-    const port = declared.find(
-      (element) =>
-        element.type === "source_port" &&
-        element.source_port_id === "source_port_97",
-    )
-    if (port?.type !== "source_port")
-      throw new Error("Missing SDA fixture port")
-    port[attribute] = true
-    expect(() =>
-      convertCircuitJsonToSysConfig(declared, pedometerOptions),
-    ).toThrow(`${attribute} conflicts`)
+  for (const source_port_id of ["source_port_97", "source_port_113"]) {
+    for (const attribute of attributes) {
+      const declared = structuredClone(circuit)
+      const port = declared.find(
+        (element) =>
+          element.type === "source_port" &&
+          element.source_port_id === source_port_id,
+      )
+      if (port?.type !== "source_port")
+        throw new Error("Missing I2C fixture port")
+      port.is_using_open_drain = true
+      port[attribute] = true
+      expect(() =>
+        convertCircuitJsonToSysConfig(declared, pedometerOptions),
+      ).toThrow(`${attribute} conflicts`)
+    }
   }
 })
