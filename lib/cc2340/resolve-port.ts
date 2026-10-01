@@ -87,6 +87,10 @@ export function checkCc2340Function(
     "is_configured_for_uart_tx",
     "is_configured_for_uart_rx",
     "do_not_connect",
+    "do_not_configure",
+    "is_using_tri_state",
+    "is_using_open_collector",
+    "is_using_open_emitter",
     "provides_power",
     "requires_power",
     "provides_ground",
@@ -117,4 +121,45 @@ export function checkCc2340Function(
     throw new Error(
       `source_port ${port.source_port_id}: ${conflict} conflicts with requested ${role} function`,
     )
+  const mismatch = (field: keyof SourcePort): never => {
+    throw new Error(
+      `source_port ${port.source_port_id}: ${field} conflicts with requested ${role} function`,
+    )
+  }
+  if (typeof request === "string") {
+    if (port.initial_output_state !== undefined)
+      mismatch("initial_output_state")
+    if (port.interrupt_trigger !== undefined) mismatch("interrupt_trigger")
+  } else {
+    if (port.i2c_max_bit_rate !== undefined) mismatch("i2c_max_bit_rate")
+    if (request.direction === "output") {
+      if (port.is_input === true) mismatch("is_input")
+      if (port.is_output === false) mismatch("is_output")
+      if (port.is_using_push_pull === false) mismatch("is_using_push_pull")
+      if (
+        port.interrupt_trigger !== undefined &&
+        port.interrupt_trigger !== "none"
+      )
+        mismatch("interrupt_trigger")
+      if (
+        port.initial_output_state !== undefined &&
+        port.initial_output_state !== request.initial_state
+      )
+        mismatch("initial_output_state")
+    } else {
+      if (port.is_output === true) mismatch("is_output")
+      if (port.is_input === false) mismatch("is_input")
+      if (port.initial_output_state !== undefined)
+        mismatch("initial_output_state")
+      if (port.is_using_internal_pullup === false && request.pull === "up")
+        mismatch("is_using_internal_pullup")
+      if (port.is_using_internal_pulldown === false && request.pull === "down")
+        mismatch("is_using_internal_pulldown")
+      if (
+        port.interrupt_trigger !== undefined &&
+        port.interrupt_trigger !== request.interrupt
+      )
+        mismatch("interrupt_trigger")
+    }
+  }
 }

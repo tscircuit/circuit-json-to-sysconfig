@@ -9,6 +9,55 @@ pass; **CC2340 real TI generation and CCS GUI validation pass** with SysConfig
 1.28.1+4785 and SimpleLink F3 SDK 9.21.00.36. This is configuration validation,
 not a complete firmware build or hardware test.
 
+## Firmware choices in Circuit JSON
+
+For CC2340R52E0RGER, the normal API needs only Circuit JSON:
+
+```ts
+const config = convertCircuitJsonToSysConfig(circuitJson)
+// When multiple MCUs have firmware settings:
+const selected = convertCircuitJsonToSysConfig(circuitJson, {
+  source_component_id: "mcu",
+})
+```
+
+The MCU must declare `firmware_rtos: "nortos"` and
+`firmware_lf_clock_source: "internal_rc" | "external_crystal"`.
+Every present GPIO-capable MCU port needs a selected function or an explicit
+`do_not_configure: true` exclusion. Capability flags (`supports_*`, `can_use_*`,
+`is_gpio`, and `is_bidirectional`) do not select a function.
+
+- Outputs: `is_output: true`, `is_using_push_pull: true`, and
+  `initial_output_state: "low" | "high"`. The level applies after GPIO initialization,
+  not at silicon reset.
+- Inputs: `is_input: true`, both `is_using_internal_pullup` and
+  `is_using_internal_pulldown` explicitly set (both false means no internal pull),
+  and `interrupt_trigger: "none" | "rising" | "falling" | "both"`.
+  Configuring an edge does not create a handler or enable the runtime interrupt.
+- I2C: exactly one `is_configured_for_i2c_sda` port and one
+  `is_configured_for_i2c_scl` port. Declare `i2c_max_bit_rate: 100000` on SCL.
+  This is the maximum bus bit rate; application code still chooses the speed
+  when opening the driver. Only the documented SDA pin 3 / SCL pin 19 route
+  is supported, fixed to I2C0.
+- Pins owned outside this generated configuration: `do_not_configure: true`.
+  These become reported reservations and cannot also select firmware behavior.
+
+All fields remain optional in the general Circuit JSON schema. This exporter
+requires them only where needed, and identifies missing fields with their TSX
+counterparts. It never chooses startup levels, pulls, interrupt edges or clock
+sources for the board. Unsupported active functions and contradictory metadata
+fail. GPIOs are ordered by physical pin; instance names are derived as
+`CONFIG_<component name>_<port name>`, uppercase with punctuation replaced by `_`.
+Name collisions fail. I2C uses `CONFIG_<component name>_I2C0`.
+
+Explicit legacy request objects remain supported, including the limited AM2434
+API below. They cannot contradict firmware choices present in Circuit JSON.
+Automatic AM2434 export, FreeRTOS, SPI, UART and complete application firmware
+are outside this implementation. Automatic input validation occurs in the
+constructor; the existing explicit-request staged API keeps its three stages.
+After a successful run, `getResolvedOptions()` returns a copy of the request for
+TI result validation and reporting excluded pins.
+
 ## Pedometer v0.4.4 example
 
 ```ts
