@@ -91,9 +91,10 @@ export function checkCc2340Function(
     "requires_power",
     "provides_ground",
     "requires_ground",
-    "is_using_open_drain",
   ]
-  // I2C electrical declarations remain unsupported until verified against TI.
+  // TI's I2CLPF3 driver configures both pins with GPIO_CFG_OUT_OD_PU.
+  // Open drain is compatible with I2C, but not our standard GPIO output mode.
+  if (role === "gpio") forbidden.push("is_using_open_drain")
   // A GPIO declaration is compatible only if the emitted configuration agrees.
   if (
     typeof request === "string" ||
