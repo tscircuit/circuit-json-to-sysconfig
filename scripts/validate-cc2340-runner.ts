@@ -4,6 +4,7 @@ import { tmpdir } from "node:os"
 import { join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { any_circuit_element } from "circuit-json"
+import { parseSysConfig } from "sysconfigts"
 import { loadPedometerCircuit } from "../examples/pedometer/load-circuit"
 import { pedometerOptions } from "../examples/pedometer/options"
 import { type Cc2340Options, convertCircuitJsonToSysConfig } from "../lib"
@@ -27,6 +28,7 @@ async function generate(
     cliPath: string
     productPath: string
     outputPath: string
+    rtos?: "nortos"
   },
 ) {
   const subprocess = Bun.spawn(
@@ -41,8 +43,7 @@ async function generate(
       "Default",
       "--package",
       "RGE",
-      "--rtos",
-      "nortos",
+      ...(ctx.rtos ? ["--rtos", ctx.rtos] : []),
       "--output",
       ctx.outputPath,
       inputPath,
@@ -120,6 +121,7 @@ export async function validateCc2340(environment: NodeJS.ProcessEnv) {
   assert.equal(version.exitCode, 0)
   assert.equal(version.stdout.toString().trim(), "1.28.1+4785")
   const directory = await mkdtemp(join(tmpdir(), "cc2340-ti-validation-"))
+  const legacyCtx = { ...ctx, rtos: "nortos" as const }
   // Preserve inputs and outputs, including on failure, for independent review.
   console.log(`CC2340 evidence: ${directory}`)
   const inputPath = join(directory, "pedometer.syscfg")
@@ -132,7 +134,7 @@ export async function validateCc2340(environment: NodeJS.ProcessEnv) {
   )
   const converted = join(directory, "converted")
   const reference = join(directory, "reference")
-  await generate(inputPath, { ...ctx, outputPath: converted })
+  await generate(inputPath, { ...legacyCtx, outputPath: converted })
   await generate(
     fileURLToPath(
       new URL(
@@ -140,7 +142,7 @@ export async function validateCc2340(environment: NodeJS.ProcessEnv) {
         import.meta.url,
       ),
     ),
-    { ...ctx, outputPath: reference },
+    { ...legacyCtx, outputPath: reference },
   )
   checkPedometer(
     await readFile(join(converted, "ti_drivers_config.c"), "utf8"),
@@ -186,13 +188,126 @@ export async function validateCc2340(environment: NodeJS.ProcessEnv) {
       convertCircuitJsonToSysConfig(circuit, options).getString(),
     )
     const outputPath = join(directory, `pin${physicalPin}`)
-    await generate(changedPath, { ...ctx, outputPath })
+    await generate(changedPath, { ...legacyCtx, outputPath })
     assert.match(
       await readFile(join(outputPath, "ti_drivers_config.h"), "utf8"),
       new RegExp(`^#define CONFIG_SIGNAL ${dio}$`, "m"),
     )
   }
+  await validateDerivedCc2340({ ...ctx, directory })
   console.log(
-    "CC2340 passed: GPIO/I2C, clock, reserved pins, exact CCS C/header parity, and DIO12-to-DIO13 change.",
+    "CC2340 passed: legacy CCS parity and pin change; request-free GPIO/I2C, SDK defaults, round-trip C/header parity, and physical pin change.",
+  )
+}
+
+async function validateDerivedCc2340(ctx: {
+  nodePath: string
+  cliPath: string
+  productPath: string
+  directory: string
+}) {
+  const circuit = any_circuit_element
+    .array()
+    .parse(
+      await Bun.file(
+        new URL(
+          "../tests/fixtures/derived-cc2340/circuit.json",
+          import.meta.url,
+        ),
+      ).json(),
+    )
+  const source = convertCircuitJsonToSysConfig(circuit).getString()
+  assert.doesNotMatch(
+    source,
+    /initialOutputState|interruptTrigger|maxBitRate|srcClkLF|--rtos/,
+  )
+  const inputPath = join(ctx.directory, "derived.syscfg")
+  await writeFile(inputPath, source)
+  const outputPath = join(ctx.directory, "derived")
+  await generate(inputPath, { ...ctx, outputPath })
+  const drivers = await readFile(
+    join(outputPath, "ti_drivers_config.c"),
+    "utf8",
+  )
+  const header = await readFile(join(outputPath, "ti_drivers_config.h"), "utf8")
+  for (const [name, dio] of [
+    ["CONFIG_U1_PIN5", 12],
+    ["CONFIG_U1_PIN6", 13],
+    ["CONFIG_GPIO_U1_I2C0_SDA", 8],
+    ["CONFIG_GPIO_U1_I2C0_SCL", 6],
+  ] as const)
+    assert.match(header, new RegExp(`^#define\\s+${name}\\s+${dio}\\s*$`, "m"))
+  assert.match(
+    drivers,
+    /GPIO_CFG_OUTPUT_INTERNAL \| GPIO_CFG_OUT_STR_MED \| GPIO_CFG_OUT_LOW, \/\* CONFIG_U1_PIN5 \*\//,
+  )
+  assert.match(
+    drivers,
+    /GPIO_CFG_INPUT_INTERNAL \| GPIO_CFG_IN_INT_NONE \| GPIO_CFG_PULL_UP_INTERNAL, \/\* CONFIG_U1_PIN6 \*\//,
+  )
+  for (const dio of [16, 17])
+    assert.ok(drivers.includes(`GPIO_CFG_DO_NOT_CONFIG, /* DIO_${dio} */`))
+  assert.match(drivers, /\.baseAddr\s*= I2C0_BASE/)
+  assert.match(drivers, /\.sclPinMux\s*= GPIO_MUX_PORTCFG_PFUNC2/)
+  assert.match(drivers, /\.sdaPinMux\s*= GPIO_MUX_PORTCFG_PFUNC4/)
+  assert.match(header, /#define CONFIG_U1_I2C0_MAXSPEED\s+\(100U\)/)
+  assert.match(
+    header,
+    /#define CONFIG_U1_I2C0_MAXBITRATE\s+\(\(I2C_BitRate\)I2C_100kHz\)/,
+  )
+  assert.match(drivers, /PowerLPF3_selectLFXT\(\)/)
+  assert.doesNotMatch(
+    drivers,
+    /PowerLPF3_selectLFOSC\(\)|Board_\w*ExtFlash|BOARD_EXT_FLASH/,
+  )
+
+  const roundTripPath = join(ctx.directory, "derived-round-trip.syscfg")
+  await writeFile(roundTripPath, parseSysConfig(source).getString())
+  const roundTripOutput = join(ctx.directory, "derived-round-trip")
+  await generate(roundTripPath, { ...ctx, outputPath: roundTripOutput })
+  for (const filename of requiredFiles)
+    assert.equal(
+      await readFile(join(outputPath, filename), "utf8"),
+      await readFile(join(roundTripOutput, filename), "utf8"),
+      `${filename}: derived round-trip parity`,
+    )
+
+  const output = circuit.find(
+    (element) =>
+      element.type === "source_port" && element.source_port_id === "output",
+  )
+  if (output?.type !== "source_port")
+    throw new Error("Missing output fixture port")
+  output.pin_number = 4
+  const changedPath = join(ctx.directory, "derived-pin-change.syscfg")
+  await writeFile(
+    changedPath,
+    convertCircuitJsonToSysConfig(circuit).getString(),
+  )
+  const changedOutput = join(ctx.directory, "derived-pin-change")
+  await generate(changedPath, { ...ctx, outputPath: changedOutput })
+  const changedHeader = await readFile(
+    join(changedOutput, "ti_drivers_config.h"),
+    "utf8",
+  )
+  assert.match(changedHeader, /^#define CONFIG_U1_PIN4 11$/m)
+  assert.doesNotMatch(changedHeader, /^#define CONFIG_U1_PIN5 /m)
+  assert.match(
+    await readFile(join(changedOutput, "ti_drivers_config.c"), "utf8"),
+    /GPIO_CFG_OUTPUT_INTERNAL \| GPIO_CFG_OUT_STR_MED \| GPIO_CFG_OUT_LOW, \/\* CONFIG_U1_PIN4 \*\//,
+  )
+  // SWD reset preservation is a native default, not an immutable reservation.
+  output.pin_number = 7
+  const debugPath = join(ctx.directory, "derived-debug-gpio.syscfg")
+  await writeFile(debugPath, convertCircuitJsonToSysConfig(circuit).getString())
+  const debugOutput = join(ctx.directory, "derived-debug-gpio")
+  await generate(debugPath, { ...ctx, outputPath: debugOutput })
+  assert.match(
+    await readFile(join(debugOutput, "ti_drivers_config.h"), "utf8"),
+    /^#define CONFIG_U1_PIN7 16$/m,
+  )
+  assert.match(
+    await readFile(join(debugOutput, "ti_drivers_config.c"), "utf8"),
+    /GPIO_CFG_OUTPUT_INTERNAL \| GPIO_CFG_OUT_STR_MED \| GPIO_CFG_OUT_LOW, \/\* CONFIG_U1_PIN7 \*\//,
   )
 }

@@ -1,6 +1,6 @@
 # circuit-json-to-sysconfig
 
-Convert Circuit JSON GPIO/I2C requests into a TI SysConfig document. The verified
+Convert Circuit JSON pin attributes or explicit GPIO/I2C requests into a TI SysConfig document. The verified
 AM2434 scope is **AM2434BSDFHIALVR**, ALV package, R5F core `r5fss0-0`, with output on
 ball **A7** (`MCU_GPIO0_5`) or **B7** (`MCU_GPIO0_6`). These mappings are documented and
 **real TI generation passed for all four validation inputs**. CC2340 support uses
@@ -9,7 +9,65 @@ pass; **CC2340 real TI generation and CCS GUI validation pass** with SysConfig
 1.28.1+4785 and SimpleLink F3 SDK 9.21.00.36. This is configuration validation,
 not a complete firmware build or hardware test.
 
-## Pedometer v0.4.4 example
+## CC2340 conversion from existing pin attributes
+
+For **CC2340R52E0RGER**, the second argument is optional. The converter selects
+the single supported MCU by exact MPN and uses its `source_port` records:
+
+```ts
+const config = convertCircuitJsonToSysConfig(circuitJson)
+// If there are multiple supported MCUs:
+const selected = convertCircuitJsonToSysConfig(circuitJson, {
+  source_component_id: "mcu",
+})
+```
+
+No request JSON file or new Props/Circuit JSON fields are needed for this path.
+The board author supplies existing `pinAttributes`, and a compatible core emits
+them on source ports:
+
+| Existing TSX attribute | Circuit JSON | Native setting |
+| --- | --- | --- |
+| `isInput: true` | `is_input: true` | GPIO `mode = "Input"` |
+| `isOutput: true` | `is_output: true` | GPIO `mode = "Output"` |
+| `isUsingInternalPullup: true` | `is_using_internal_pullup: true` | Input `pull = "Pull Up"` |
+| `isUsingInternalPulldown: true` | `is_using_internal_pulldown: true` | Input `pull = "Pull Down"` |
+| `activeCapability: "i2c_sda"` / `"i2c_scl"` | `is_configured_for_i2c_sda` / `is_configured_for_i2c_scl` | I2C0 SDA/SCL on physical RGE pins 3/19 |
+
+`isGpio`, `supports_*`, and `can_use_*` describe capabilities; they do not activate
+an instance. A GPIO requires exactly one input/output flag and no bidirectional
+declaration. I2C accepts open-drain and bidirectional declarations, but rejects
+a conflicting GPIO direction. Selected electrical modes must agree with the
+native driver. Tri-state, open-collector/emitter, open-drain GPIO, SPI and UART
+are currently unsupported and fail instead of being dropped.
+
+Output names are deterministic (`CONFIG_U1_PIN5`, `CONFIG_U1_I2C0`), and pins are
+sorted by physical identity. No behavior is inferred from signal or net names.
+Unconnected capability-only ports remain unallocated. Connected GPIO-capable
+ports without a supported function are reported together, with source IDs,
+names and physical pin numbers. Duplicate identities and contradictory aliases
+remain errors. SWD pins 7/8 retain the SDK's reset settings unless the circuit
+explicitly selects a supported GPIO function.
+Connected or configured LF crystal pins 14/15 fail because their clock ownership
+cannot be established by this conversion path.
+
+Undeclared startup, interrupt, bitrate and LF clock settings are **left unset**
+for official SimpleLink F3 SDK **9.21.00.36** to resolve. Its metadata defaults
+are Low output startup, no GPIO pull/interrupt, 100 kbit/s I2C when no target
+instances are attached, and an external LF crystal. No RTOS is selected by the
+converter. These are SDK defaults, not verified application requirements.
+The derived document loads CCFG to preserve native clock ownership and retains
+the existing custom-device rule that disables LaunchPad flash initialization.
+
+`bun run validate:cc2340` tests real TI C/header generation for the
+[independent pin-attribute fixture](tests/fixtures/derived-cc2340/README.md), its
+sysconfigts round trip, and a physical output-pin change. The unmodified pedometer
+still lacks selected functions for connected pins; it fails actionably rather
+than receiving a firmware preset. AM2434 still uses the explicit request API below.
+CLI integration is separate: this library change does not remove a request-file
+requirement from an already installed `@tscircuit/ti` CLI.
+
+## Pedometer v0.4.4 explicit-request example
 
 ```ts
 import { convertCircuitJsonToSysConfig } from "circuit-json-to-sysconfig"
@@ -66,6 +124,8 @@ CCS reference C/header parity, and real TI output for the DIO12-to-DIO13 fixture
 change. It preserves its temporary inputs/outputs and prints their location.
 The SDK release notes list SysConfig 1.26.3; that older version has not been
 tested in this validation. The existing automated TI CI job remains AM2434-only.
+The same runner also checks request-free CC2340 GPIO/I2C generation, omitted
+SDK defaults, round-trip C/header parity, and an output-pin change from DIO12 to DIO11.
 
 ## AM2434 library usage
 
@@ -185,9 +245,9 @@ Tested locally with Bun 1.3.9, TypeScript 5.9.3, Biome 2.5.14, and `@types/bun` 
 The dependency pins the merged [sysconfigts PR #1](https://github.com/tscircuit/sysconfigts/pull/1)
 commit [`35381191fb3946185632d9c4c2ac4c2e69329535`](https://github.com/tscircuit/sysconfigts/commit/35381191fb3946185632d9c4c2ac4c2e69329535),
 which exports `inspectSysConfig()`. This does not replace the real-TI gate.
-Circuit JSON is pinned to `0.0.506`; Zod `3.25.76` is an explicit runtime dependency
-because that Circuit JSON release imports Zod without declaring it as a runtime
-dependency.
+Circuit JSON is pinned to `0.0.515`, preserving existing input/output and drive-mode
+flags during source-port parsing. Zod `3.25.76` is an explicit runtime dependency
+used to validate conversion requests and MCU selection.
 
 ## Run TI validation
 

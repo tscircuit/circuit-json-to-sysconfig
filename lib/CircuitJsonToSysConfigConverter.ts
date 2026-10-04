@@ -15,7 +15,7 @@ export class CircuitJsonToSysConfigConverter {
   private readonly ctx: ConvertContext
   private currentStageIndex = 0
 
-  constructor(circuitJson: CircuitJson, options: ConvertOptions) {
+  constructor(circuitJson: CircuitJson, options: ConvertOptions = {}) {
     if (!options || Object.getPrototypeOf(options) !== Object.prototype)
       throw new Error("Options must be a plain configuration object")
     this.ctx = {

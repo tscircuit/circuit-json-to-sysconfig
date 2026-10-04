@@ -1,6 +1,6 @@
 import { type CircuitJson, type SourcePort, source_port } from "circuit-json"
 import type { Cc2340Pin, Cc2340Target } from "../targets/cc2340r5rge"
-import type { Cc2340GpioRequest } from "./options"
+import type { Cc2340GpioConfiguration } from "./configuration"
 
 export interface ResolvedCc2340Port {
   port: SourcePort
@@ -75,7 +75,7 @@ export function resolveCc2340Port(
 
 export function checkCc2340Function(
   resolved: ResolvedCc2340Port,
-  request: Cc2340GpioRequest | "sda" | "scl",
+  request: Cc2340GpioConfiguration | "sda" | "scl",
 ) {
   const { port } = resolved
   const role = typeof request === "string" ? request : "gpio"
@@ -91,10 +91,21 @@ export function checkCc2340Function(
     "requires_power",
     "provides_ground",
     "requires_ground",
+    "is_passive",
+    "is_using_tri_state",
+    "is_using_open_collector",
+    "is_using_open_emitter",
   ]
   // TI's I2CLPF3 driver configures both pins with GPIO_CFG_OUT_OD_PU.
   // Open drain is compatible with I2C, but not our standard GPIO output mode.
-  if (role === "gpio") forbidden.push("is_using_open_drain")
+  if (role === "gpio") {
+    forbidden.push("is_using_open_drain", "is_bidirectional")
+    if (typeof request !== "string")
+      forbidden.push(request.direction === "input" ? "is_output" : "is_input")
+  } else {
+    // I2C is bidirectional; a single GPIO direction would conflict with the driver.
+    forbidden.push("is_input", "is_output")
+  }
   // A GPIO declaration is compatible only if the emitted configuration agrees.
   if (
     typeof request === "string" ||

@@ -13,18 +13,19 @@ export function buildCc2340SysConfig(
   resolved: ResolvedCc2340Requests,
 ): SysConfig {
   const { target } = resolved
+  const firmware = resolved.options?.firmware
   const config = new SysConfig()
   // This target describes a custom device, not a TI LaunchPad. Its board-specific
   // external-flash startup would otherwise drive unrelated display pins.
   config.addModule({ name: "Board", modulePath: "/ti/drivers/Board" })
   config.setValue("Board.generateInitializationFunctions", false)
-  if (resolved.options.firmware.lf_clock_source) {
+  if (!resolved.options || firmware?.lf_clock_source) {
     config.addModule({ name: "CCFG", modulePath: "/ti/devices/CCFG" })
+  }
+  if (firmware?.lf_clock_source) {
     config.setValue(
       "CCFG.srcClkLF",
-      resolved.options.firmware.lf_clock_source === "lf_rcosc"
-        ? "LF RCOSC"
-        : "LF XOSC",
+      firmware.lf_clock_source === "lf_rcosc" ? "LF RCOSC" : "LF XOSC",
     )
   }
   if (resolved.gpios.length)
@@ -38,19 +39,24 @@ export function buildCc2340SysConfig(
       request.direction === "output" ? "Output" : "Input",
     )
     if (request.direction === "output") {
-      config.setValue(
-        `${instance}.initialOutputState`,
-        request.initial_state === "high" ? "High" : "Low",
-      )
-      config.setValue(`${instance}.outputType`, "Standard")
-      config.setValue(`${instance}.pull`, "None")
-      config.setValue(`${instance}.interruptTrigger`, "None")
+      if (request.initial_state !== undefined)
+        config.setValue(
+          `${instance}.initialOutputState`,
+          request.initial_state === "high" ? "High" : "Low",
+        )
+      if (resolved.options) {
+        config.setValue(`${instance}.outputType`, "Standard")
+        config.setValue(`${instance}.pull`, "None")
+        config.setValue(`${instance}.interruptTrigger`, "None")
+      }
     } else {
-      config.setValue(`${instance}.pull`, pulls[request.pull])
-      config.setValue(
-        `${instance}.interruptTrigger`,
-        interrupts[request.interrupt],
-      )
+      if (request.pull !== undefined)
+        config.setValue(`${instance}.pull`, pulls[request.pull])
+      if (request.interrupt !== undefined)
+        config.setValue(
+          `${instance}.interruptTrigger`,
+          interrupts[request.interrupt],
+        )
     }
     config.setValue(`${instance}.gpioPin.$assign`, pin.identifier)
   }
@@ -64,7 +70,8 @@ export function buildCc2340SysConfig(
     config.addInstance({ name: "I2C1", moduleName: "I2C" })
     config.setValue("I2C1.$name", request.i2c_name)
     // Public API uses bits/s; the SimpleLink SDK property uses kbit/s.
-    config.setValue("I2C1.maxBitRate", request.max_bit_rate / 1000)
+    if (request.max_bit_rate !== undefined)
+      config.setValue("I2C1.maxBitRate", request.max_bit_rate / 1000)
     config.setValue("I2C1.i2c.sdaPin.$assign", sda.identifier)
     config.setValue("I2C1.i2c.sclPin.$assign", scl.identifier)
     config.setValue(
@@ -72,9 +79,10 @@ export function buildCc2340SysConfig(
       target.i2c.peripheral,
     )
   }
+  const rtosArgument = firmware ? ` --rtos "${firmware.rtos}"` : ""
   config.nodes.unshift(
     new SysConfigTrivia({
-      text: `/**\n * @cliArgs --device "${target.device}" --part "${target.part}" --package "${target.package}" --rtos "${resolved.options.firmware.rtos}" --product "${target.product}"\n * @v2CliArgs --device "${target.v2.device}" --package "${target.v2.package}" --rtos "${resolved.options.firmware.rtos}" --product "${target.product}"\n */\n`,
+      text: `/**\n * @cliArgs --device "${target.device}" --part "${target.part}" --package "${target.package}"${rtosArgument} --product "${target.product}"\n * @v2CliArgs --device "${target.v2.device}" --package "${target.v2.package}"${rtosArgument} --product "${target.product}"\n */\n`,
     }),
   )
   return config
