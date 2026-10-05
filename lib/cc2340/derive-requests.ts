@@ -6,6 +6,7 @@ import {
 } from "circuit-json"
 import type { Cc2340Target } from "../targets/cc2340r5rge"
 import type { Cc2340GpioConfiguration } from "./configuration"
+import { resolveCc2340LfCrystal } from "./resolve-lf-crystal"
 import {
   checkCc2340Function,
   type ResolvedCc2340Port,
@@ -54,6 +55,7 @@ export function deriveCc2340Requests(
     ),
   )
   const resolved: ResolvedCc2340Requests = { target: ctx.target, gpios: [] }
+  resolved.lfCrystal = resolveCc2340LfCrystal(ports, ctx)
   const missing: string[] = []
   const sdaPorts: ResolvedCc2340Port[] = []
   const sclPorts: ResolvedCc2340Port[] = []
@@ -128,7 +130,21 @@ export function deriveCc2340Requests(
       continue
     }
     if (ctx.target.lfCrystalPins.some((pin) => pin === physical.pin.pin)) {
-      if (connected || selectedGpio || isSda || isScl || selectedElectricalMode)
+      if (
+        selectedGpio ||
+        isSda ||
+        isScl ||
+        selectedElectricalMode ||
+        port.do_not_connect ||
+        port.requires_power ||
+        port.provides_power ||
+        port.requires_ground ||
+        port.provides_ground
+      )
+        missing.push(
+          `${identity}: LF crystal pins have a conflicting GPIO, peripheral, or electrical declaration`,
+        )
+      else if (connected && !resolved.lfCrystal)
         missing.push(
           `${identity}: SDK LF crystal ownership is unresolved; do not assume an internal clock or GPIO function`,
         )

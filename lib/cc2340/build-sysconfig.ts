@@ -22,7 +22,11 @@ export function buildCc2340SysConfig(
   if (!resolved.options || firmware?.lf_clock_source) {
     config.addModule({ name: "CCFG", modulePath: "/ti/devices/CCFG" })
   }
-  if (firmware?.lf_clock_source) {
+  if (resolved.lfCrystal) {
+    // CCFG.srcClkLF is applied by the SDK's Power module, including GPIO-only circuits.
+    config.addModule({ name: "Power", modulePath: "/ti/drivers/Power" })
+    config.setValue("CCFG.srcClkLF", "LF XOSC")
+  } else if (firmware?.lf_clock_source) {
     config.setValue(
       "CCFG.srcClkLF",
       firmware.lf_clock_source === "lf_rcosc" ? "LF RCOSC" : "LF XOSC",

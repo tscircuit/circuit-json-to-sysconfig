@@ -48,8 +48,13 @@ ports without a supported function are reported together, with source IDs,
 names and physical pin numbers. Duplicate identities and contradictory aliases
 remain errors. SWD pins 7/8 retain the SDK's reset settings unless the circuit
 explicitly selects a supported GPIO function.
-Connected or configured LF crystal pins 14/15 fail because their clock ownership
-cannot be established by this conversion path.
+When a `simple_crystal` declaring 32768 Hz connects its two distinct terminals
+to MCU pins 14/15 on separate electrical nets, conversion selects `LF XOSC` and
+loads TI's Power module to apply that clock setting. Connections are resolved
+through source traces and nets with tscircuit's connectivity helper; names and
+part-number strings are not used to guess a crystal. GPIO/peripheral conflicts,
+shorted nets, incomplete wiring, multiple crystals and unsupported frequencies
+fail. Four-pin crystal terminal mapping is not supported by this LF path.
 
 Undeclared startup, interrupt, bitrate and LF clock settings are **left unset**
 for official SimpleLink F3 SDK **9.21.00.36** to resolve. Its metadata defaults
@@ -66,6 +71,12 @@ still lacks selected functions for connected pins; it fails actionably rather
 than receiving a firmware preset. AM2434 still uses the explicit request API below.
 CLI integration is separate: this library change does not remove a request-file
 requirement from an already installed `@tscircuit/ti` CLI.
+
+After the staged converter finishes, `getResolvedConfiguration()` returns a
+detached copy of the selected target/component and GPIO/I2C declarations, including
+the recognized crystal. Native validators can use these declarations without
+duplicating pin-role derivation. Omitted startup, interrupt, bitrate and RTOS
+choices stay omitted; this method does not evaluate TI's effective defaults.
 
 ## Pedometer v0.4.4 explicit-request example
 

@@ -19,8 +19,9 @@ The omitted values are resolved by the pinned SDK, not a board preset:
   `maxBitRate` defaults to `0`; without attached target instances it resolves to
   100 kbit/s. The converter writes no bitrate assignment.
 - [CCFGCC23X0.syscfg.js](https://github.com/TexasInstruments/simplelink-lowpower-f3-sdk/blob/lpf3-9.21.00.36_LTS/source/ti/devices/.meta/CCFG/CCFGCC23X0.syscfg.js):
-  LF clock defaults to `LF XOSC`. The conversion rejects connected or configured
-  pins 14/15 because Circuit JSON does not yet disambiguate their clock ownership.
+  LF clock defaults to `LF XOSC`. A recognized 32768 Hz two-pin crystal on MCU
+  pins 14/15 explicitly selects that clock. Incomplete or conflicting ownership
+  remains an error.
 - [GPIOLPF3.syscfg.js](https://github.com/TexasInstruments/simplelink-lowpower-f3-sdk/blob/lpf3-9.21.00.36_LTS/source/ti/drivers/.meta/gpio/GPIOLPF3.syscfg.js):
   unconfigured SWD pins retain their reset settings via `GPIO_CFG_DO_NOT_CONFIG`.
   This is a default, not a prohibition on explicitly selecting GPIO on these pins.
@@ -28,3 +29,14 @@ The omitted values are resolved by the pinned SDK, not a board preset:
 No RTOS option is passed in this test. Native peripheral generation succeeds
 without selecting an application RTOS. These defaults do not establish the
 correct startup, timing, interrupt or clock choices for an arbitrary application.
+
+`lf-crystal.circuit.json` is an independent source-only fixture with one GPIO
+and a 32768 Hz crystal connected to MCU pins 14/15 through two named nets.
+The generic net names deliberately carry no clock information. TI's
+[CC23X0 Power initialization](https://github.com/TexasInstruments/simplelink-lowpower-f3-sdk/blob/lpf3-9.21.00.36_LTS/source/ti/drivers/.meta/power/PowerCC23X0.Board_init.c.xdt)
+uses `CCFG.srcClkLF`; loading Power is required to emit the clock initialization
+even when no I2C module is present. The native runner verifies `PowerLPF3_selectLFXT()`,
+unallocated DIO3/DIO4, and C/header round-trip parity for this fixture.
+The target's 32768 Hz constraint and RGE pin pair come from TI's
+[CC2340 datasheet](https://www.ti.com/lit/ds/symlink/cc2340r5.pdf), LFXT specifications
+and pin table. No pedometer signal names or firmware preset are part of this fixture.

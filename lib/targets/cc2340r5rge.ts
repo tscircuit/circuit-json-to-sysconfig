@@ -10,6 +10,8 @@ export const cc2340r5rge = {
   // GPIOLPF3.syscfg.js _getDefaultAttrs() preserves SWD reset settings.
   defaultDebugPins: [7, 8],
   lfCrystalPins: [14, 15],
+  // SWRS272, 32.768 kHz Crystal Oscillator (LFXT) specifications.
+  lfCrystalFrequencyHz: 32768,
   gpioPins: [
     { pin: 3, identifier: "DIO8", aliases: ["DIO8"] },
     { pin: 4, identifier: "DIO11", aliases: ["DIO11"] },

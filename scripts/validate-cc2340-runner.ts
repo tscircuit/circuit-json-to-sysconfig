@@ -195,9 +195,61 @@ export async function validateCc2340(environment: NodeJS.ProcessEnv) {
     )
   }
   await validateDerivedCc2340({ ...ctx, directory })
+  await validateDerivedLfCrystal({ ...ctx, directory })
   console.log(
-    "CC2340 passed: legacy CCS parity and pin change; request-free GPIO/I2C, SDK defaults, round-trip C/header parity, and physical pin change.",
+    "CC2340 passed: legacy CCS parity and pin change; request-free GPIO/I2C, SDK defaults, crystal connectivity, round-trip C/header parity, and physical pin change.",
   )
+}
+
+async function validateDerivedLfCrystal(ctx: {
+  nodePath: string
+  cliPath: string
+  productPath: string
+  directory: string
+}) {
+  const circuitJson = any_circuit_element
+    .array()
+    .parse(
+      await Bun.file(
+        new URL(
+          "../tests/fixtures/derived-cc2340/lf-crystal.circuit.json",
+          import.meta.url,
+        ),
+      ).json(),
+    )
+  const source = convertCircuitJsonToSysConfig(circuitJson).getString()
+  assert.match(source, /CCFG.srcClkLF = "LF XOSC"/)
+  assert.doesNotMatch(
+    source,
+    /--rtos|initialOutputState|interruptTrigger|maxBitRate/,
+  )
+  const inputPath = join(ctx.directory, "derived-lf-crystal.syscfg")
+  await writeFile(inputPath, source)
+  const outputPath = join(ctx.directory, "derived-lf-crystal")
+  await generate(inputPath, { ...ctx, outputPath })
+  const drivers = await readFile(
+    join(outputPath, "ti_drivers_config.c"),
+    "utf8",
+  )
+  const header = await readFile(join(outputPath, "ti_drivers_config.h"), "utf8")
+  assert.match(header, /^#define CONFIG_U1_PIN4 11$/m)
+  assert.match(drivers, /PowerLPF3_selectLFXT\(\)/)
+  assert.doesNotMatch(drivers, /PowerLPF3_selectLFOSC\(\)/)
+  for (const dio of [3, 4])
+    assert.ok(drivers.includes(`GPIO_CFG_NO_DIR, /* DIO_${dio} */`))
+  const roundTripPath = join(
+    ctx.directory,
+    "derived-lf-crystal-round-trip.syscfg",
+  )
+  await writeFile(roundTripPath, parseSysConfig(source).getString())
+  const roundTripOutput = join(ctx.directory, "derived-lf-crystal-round-trip")
+  await generate(roundTripPath, { ...ctx, outputPath: roundTripOutput })
+  for (const filename of requiredFiles)
+    assert.equal(
+      await readFile(join(outputPath, filename), "utf8"),
+      await readFile(join(roundTripOutput, filename), "utf8"),
+      `${filename}: derived crystal round-trip parity`,
+    )
 }
 
 async function validateDerivedCc2340(ctx: {

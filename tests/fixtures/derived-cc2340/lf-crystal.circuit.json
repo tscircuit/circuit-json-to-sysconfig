@@ -1,0 +1,92 @@
+[
+  {
+    "type": "source_component",
+    "ftype": "simple_chip",
+    "source_component_id": "mcu",
+    "name": "U1",
+    "manufacturer_part_number": "CC2340R52E0RGER"
+  },
+  {
+    "type": "source_port",
+    "source_port_id": "output",
+    "source_component_id": "mcu",
+    "name": "DIO11",
+    "pin_number": 4,
+    "is_output": true
+  },
+  {
+    "type": "source_port",
+    "source_port_id": "lf_p",
+    "source_component_id": "mcu",
+    "name": "DIO3_X32P",
+    "pin_number": 14,
+    "is_gpio": true
+  },
+  {
+    "type": "source_port",
+    "source_port_id": "lf_n",
+    "source_component_id": "mcu",
+    "name": "DIO4_X32N",
+    "pin_number": 15,
+    "is_gpio": true
+  },
+  {
+    "type": "source_component",
+    "ftype": "simple_crystal",
+    "source_component_id": "crystal",
+    "name": "Y1",
+    "frequency": 32768,
+    "pin_variant": "two_pin",
+    "are_pins_interchangeable": true
+  },
+  {
+    "type": "source_port",
+    "source_port_id": "crystal_p",
+    "source_component_id": "crystal",
+    "name": "pin1",
+    "pin_number": 1
+  },
+  {
+    "type": "source_port",
+    "source_port_id": "crystal_n",
+    "source_component_id": "crystal",
+    "name": "pin2",
+    "pin_number": 2
+  },
+  {
+    "type": "source_net",
+    "source_net_id": "net_p",
+    "name": "arbitrary_a",
+    "member_source_group_ids": []
+  },
+  {
+    "type": "source_net",
+    "source_net_id": "net_n",
+    "name": "arbitrary_b",
+    "member_source_group_ids": []
+  },
+  {
+    "type": "source_trace",
+    "source_trace_id": "mcu_p_trace",
+    "connected_source_port_ids": ["lf_p"],
+    "connected_source_net_ids": ["net_p"]
+  },
+  {
+    "type": "source_trace",
+    "source_trace_id": "crystal_p_trace",
+    "connected_source_port_ids": ["crystal_p"],
+    "connected_source_net_ids": ["net_p"]
+  },
+  {
+    "type": "source_trace",
+    "source_trace_id": "mcu_n_trace",
+    "connected_source_port_ids": ["lf_n"],
+    "connected_source_net_ids": ["net_n"]
+  },
+  {
+    "type": "source_trace",
+    "source_trace_id": "crystal_n_trace",
+    "connected_source_port_ids": ["crystal_n"],
+    "connected_source_net_ids": ["net_n"]
+  }
+]
