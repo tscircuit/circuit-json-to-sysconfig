@@ -1,10 +1,12 @@
 import { type CircuitJson, type SourcePort, source_port } from "circuit-json"
 import type { Cc2340Pin, Cc2340Target } from "../targets/cc2340r5rge"
 import type { Cc2340GpioConfiguration } from "./configuration"
+import { formatCc2340Pin } from "./format-pin-label"
 
 export interface ResolvedCc2340Port {
   port: SourcePort
   pin: Cc2340Pin
+  label: string
 }
 
 export function resolveCc2340Port(
@@ -21,33 +23,37 @@ export function resolveCc2340Port(
   const matches = ports.filter((port) => port.source_port_id === source_port_id)
   if (matches.length !== 1)
     throw new Error(
-      `Expected exactly one source_port ${source_port_id}; found ${matches.length}`,
+      `Expected exactly one MCU pin record; found ${matches.length}. Check the selected pin in the request and rebuild the circuit.`,
     )
   const port = source_port.parse(matches[0])
+  const label = formatCc2340Pin(port, ctx)
   if (port.source_component_id !== ctx.source_component_id)
     throw new Error(
-      `source_port ${source_port_id} does not belong to MCU ${ctx.source_component_id}`,
+      `${label} does not belong to the selected MCU. Select a pin on that MCU.`,
     )
   const pin = ctx.target.gpioPins.find((pin) => pin.pin === port.pin_number)
   if (!pin)
     throw new Error(
       `Unsupported CC2340 physical pin ${port.pin_number}; a supported numeric RGE pin is required`,
     )
-  for (const label of new Set([port.name, ...(port.port_hints ?? [])])) {
+  for (const alias of new Set([port.name, ...(port.port_hints ?? [])])) {
     if (
-      /^(?:pin)?\d+$/.test(label) &&
-      Number(label.replace(/^pin/, "")) !== pin.pin
+      /^(?:pin)?\d+$/.test(alias) &&
+      Number(alias.replace(/^pin/, "")) !== pin.pin
     )
       throw new Error(
-        `source_port ${source_port_id}: numeric alias ${label} contradicts physical pin ${pin.pin}`,
+        `${label}: numeric alias ${alias} contradicts physical pin ${pin.pin}`,
       )
-    if (/^DIO/.test(label) && !pin.aliases.some((alias) => alias === label))
+    if (
+      /^DIO/.test(alias) &&
+      !pin.aliases.some((pinAlias) => pinAlias === alias)
+    )
       throw new Error(
-        `source_port ${source_port_id}: alias ${label} contradicts physical pin ${pin.pin} (${pin.identifier})`,
+        `${label}: alias ${alias} contradicts physical pin ${pin.pin} (${pin.identifier})`,
       )
-    if (/^(?:[A-HJ-NPRT-WY]|AA)(?:[1-9]|1[0-9]|2[01])$/.test(label))
+    if (/^(?:[A-HJ-NPRT-WY]|AA)(?:[1-9]|1[0-9]|2[01])$/.test(alias))
       throw new Error(
-        `source_port ${source_port_id}: unsupported package alias ${label}; CC2340 uses numeric RGE pins`,
+        `${label}: unsupported package alias ${alias}; CC2340 uses numeric RGE pins`,
       )
   }
   for (const other of ports) {
@@ -67,17 +73,17 @@ export function resolveCc2340Port(
       )
     )
       throw new Error(
-        `Conflicting pin identity on source_ports ${source_port_id} and ${other.source_port_id}`,
+        `Conflicting pin identity: ${label} and ${formatCc2340Pin(other, ctx)} claim the same physical pin. Correct the chip pinLabels/pinAttributes and rebuild the circuit.`,
       )
   }
-  return { port, pin }
+  return { port, pin, label }
 }
 
 export function checkCc2340Function(
   resolved: ResolvedCc2340Port,
   request: Cc2340GpioConfiguration | "sda" | "scl",
 ) {
-  const { port } = resolved
+  const { port, label } = resolved
   const role = typeof request === "string" ? request : "gpio"
   const forbidden: (keyof SourcePort)[] = [
     "is_configured_for_spi_mosi",
@@ -126,6 +132,6 @@ export function checkCc2340Function(
   const conflict = forbidden.find((attribute) => port[attribute] === true)
   if (conflict)
     throw new Error(
-      `source_port ${port.source_port_id}: ${conflict} conflicts with requested ${role} function`,
+      `${label}: ${conflict} conflicts with requested ${role} function. Correct the conflicting declaration in TSX pinAttributes.`,
     )
 }

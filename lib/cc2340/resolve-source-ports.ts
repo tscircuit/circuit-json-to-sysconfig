@@ -5,6 +5,8 @@ import {
   source_port,
 } from "circuit-json"
 
+import { formatCc2340Component, formatCc2340Pin } from "./format-pin-label"
+
 /** Missing connected ports must not disappear from a derived configuration. */
 export function resolveCc2340SourcePorts(
   component: SourceSimpleChip,
@@ -14,20 +16,25 @@ export function resolveCc2340SourcePorts(
     (element) => element.type === "source_port",
   )
   const sourcePortIds = new Set(sourcePorts.map((port) => port.source_port_id))
-  const missing = ctx.circuitJson.flatMap((element) =>
-    element.type === "source_trace"
-      ? [...new Set(element.connected_source_port_ids)]
-          .filter((source_port_id) => !sourcePortIds.has(source_port_id))
-          .map(
-            (source_port_id) =>
-              `${element.source_trace_id}: missing source_port ${source_port_id}`,
-          )
-      : [],
+  const incompleteTraces = ctx.circuitJson.filter(
+    (element) =>
+      element.type === "source_trace" &&
+      element.connected_source_port_ids.some(
+        (source_port_id) => !sourcePortIds.has(source_port_id),
+      ),
   )
-  if (missing.length)
-    throw new Error(
-      `Incomplete Circuit JSON pin records:\n${missing.sort().join("\n")}\nRebuild the circuit so every connected pin has a source_port record before generating SysConfig.`,
+  if (incompleteTraces.length) {
+    const knownPins = sourcePorts.filter((port) =>
+      incompleteTraces.some(
+        (trace) =>
+          trace.type === "source_trace" &&
+          trace.connected_source_port_ids.includes(port.source_port_id),
+      ),
     )
+    throw new Error(
+      `Incomplete Circuit JSON pin records: ${incompleteTraces.length} connection(s) reference missing pins.${knownPins.length ? `\nAffected connected pins: ${knownPins.map((port) => formatCc2340Pin(port, ctx)).join(", ")}.` : ""}\nRebuild the circuit so every connected pin has a source_port record before generating SysConfig.`,
+    )
+  }
   const ports = sourcePorts
     .filter(
       (port) => port.source_component_id === component.source_component_id,
@@ -40,7 +47,7 @@ export function resolveCc2340SourcePorts(
     )
   if (!ports.length)
     throw new Error(
-      `${component.name} (${component.source_component_id}, ${component.manufacturer_part_number}): no source_port records. Rebuild the circuit with the MCU's physical pins and pinAttributes before generating SysConfig.`,
+      `${formatCc2340Component(component)}: no MCU pin records (source_port). Rebuild the circuit with the MCU's physical pins and pinAttributes before generating SysConfig.`,
     )
   return ports
 }

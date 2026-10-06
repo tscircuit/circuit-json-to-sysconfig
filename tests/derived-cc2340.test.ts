@@ -102,7 +102,7 @@ test("connected GPIO capability alone reports every unresolved pin", () => {
         { pin_number: 6, is_gpio: true },
       ]),
     ),
-  ).toThrow(/port_0.*pin 5[\s\S]*port_1.*pin 6/)
+  ).toThrow(/U1 pin 5.*signal_0[\s\S]*U1 pin 6.*signal_1/)
 })
 
 test("missing connected pin records prevent a partial configuration", () => {
@@ -117,7 +117,7 @@ test("missing connected pin records prevent a partial configuration", () => {
   const converter = new CircuitJsonToSysConfigConverter(input)
   converter.step()
   expect(() => converter.step()).toThrow(
-    /trace: missing source_port port_1[\s\S]*trace: missing source_port port_2[\s\S]*Rebuild/,
+    /1 connection\(s\) reference missing pins[\s\S]*Affected connected pins: U1 pin 5[\s\S]*Rebuild/,
   )
   expect(converter.finished).toBe(false)
   expect(() => converter.getOutput()).toThrow("must finish")
@@ -126,7 +126,7 @@ test("missing connected pin records prevent a partial configuration", () => {
 
 test("an MCU with no pin records gets an actionable component error", () => {
   expect(() => convertCircuitJsonToSysConfig(circuit([]))).toThrow(
-    /U1 \(mcu, CC2340R52E0RGER\): no source_port records[\s\S]*pinAttributes/,
+    /U1 \(CC2340R52E0RGER\): no MCU pin records[\s\S]*pinAttributes/,
   )
 })
 
@@ -136,7 +136,7 @@ test("pins with no attributes report every connected physical pin", () => {
       connected([{ pin_number: 5 }, { pin_number: 6 }]),
     ),
   ).toThrow(
-    /U1 \(mcu, CC2340R52E0RGER\)[\s\S]*U1.signal_0 \(port_0, pin 5\)[\s\S]*isInput\/isOutput[\s\S]*U1.signal_1 \(port_1, pin 6\)/,
+    /U1 \(CC2340R52E0RGER\)[\s\S]*U1 pin 5 \(signal_0\)[\s\S]*U1 pin 6 \(signal_1\)[\s\S]*isInput: true or isOutput: true/,
   )
 })
 
@@ -149,7 +149,7 @@ test("one configured pin cannot hide another pin's missing attributes", () => {
         { pin_number: 12 },
       ]),
     ),
-  ).toThrow(/port_1, pin 6[\s\S]*port_2, pin 12/)
+  ).toThrow(/U1 pin 6[\s\S]*U1 pin 12/)
 })
 
 test("a connected pin with no attributes still needs its physical identity", () => {
@@ -157,7 +157,7 @@ test("a connected pin with no attributes still needs its physical identity", () 
     convertCircuitJsonToSysConfig(
       connected([{ pin_number: 5, is_output: true }, {}]),
     ),
-  ).toThrow(/U1.signal_1.*port_1.*numeric RGE physical pin/)
+  ).toThrow(/U1 pin unspecified \(signal_1\).*numeric RGE physical pin/)
 })
 
 test("connected fixed pins and other components do not need GPIO attributes", () => {
@@ -205,7 +205,7 @@ test("an incomplete I2C selection identifies the MCU and how to complete it", ()
     convertCircuitJsonToSysConfig(
       circuit([{ pin_number: 3, is_configured_for_i2c_sda: true }]),
     ),
-  ).toThrow(/U1[\s\S]*1 SDA and 0 SCL[\s\S]*activeCapability[\s\S]*port_0/)
+  ).toThrow(/U1[\s\S]*1 SDA and 0 SCL[\s\S]*activeCapability[\s\S]*U1 pin 3/)
 })
 
 test("unused capabilities do not activate GPIO or I2C", () => {
@@ -247,7 +247,7 @@ for (const flags of [
   test(`rejects unsupported or contradictory declarations ${JSON.stringify(flags)}`, () => {
     expect(() =>
       convertCircuitJsonToSysConfig(circuit([{ pin_number: 5, ...flags }])),
-    ).toThrow(/port_0/)
+    ).toThrow(/U1 pin 5/)
   })
 }
 
@@ -360,7 +360,7 @@ test("three stages snapshot inputs, stay deterministic and expose no partial out
   )
   failed.step()
   for (let attempt = 0; attempt < 2; attempt++) {
-    expect(() => failed.step()).toThrow(/port_0/)
+    expect(() => failed.step()).toThrow(/U1 pin 5/)
     expect(failed.finished).toBe(false)
     expect(() => failed.getOutput()).toThrow("must finish")
   }
@@ -407,4 +407,68 @@ test("missing and invalid GPIO physical identities cannot silently disappear", (
         ]),
       ),
     ).toThrow(/numeric RGE physical pin/)
+})
+
+function conversionError(input: CircuitJson): string {
+  try {
+    convertCircuitJsonToSysConfig(input)
+  } catch (error) {
+    if (error instanceof Error) return error.message
+    throw error
+  }
+  throw new Error("Expected conversion to reject unresolved pins")
+}
+
+test("pin errors use circuit labels and stay unchanged when generated IDs change", () => {
+  const input = connected([
+    { pin_number: 4, name: "DIO11" },
+    { pin_number: 6, name: "DIO13", is_gpio: true },
+  ])
+  const renamed = input.map((element) => {
+    if (element.type === "source_component")
+      return { ...element, source_component_id: "source_component_123" }
+    if (element.type === "source_port")
+      return {
+        ...element,
+        source_component_id: "source_component_123",
+        source_port_id: `source_${element.source_port_id}`,
+      }
+    if (element.type === "source_trace")
+      return {
+        ...element,
+        source_trace_id: "source_trace_456",
+        connected_source_port_ids: element.connected_source_port_ids.map(
+          (id) => `source_${id}`,
+        ),
+      }
+    return element
+  })
+  const message = conversionError(input)
+  expect(conversionError(renamed)).toBe(message)
+  expect(message).toContain("U1 (CC2340R52E0RGER)")
+  expect(message).toContain("U1 pin 4 (DIO11)")
+  expect(message).toContain("U1 pin 6 (DIO13)")
+  expect(message).toContain("isInput: true or isOutput: true")
+  expect(message).toContain("Datasheet capabilities")
+  expect(message).not.toMatch(
+    /source_component_123|source_trace_456|mcu|port_0|port_1/,
+  )
+})
+
+test("incomplete I2C and GPIO conflicts name physical pins without record IDs", () => {
+  const i2c = conversionError(
+    circuit([{ pin_number: 3, name: "DIO8", is_configured_for_i2c_sda: true }]),
+  )
+  expect(i2c).toContain("Selected pins: U1 pin 3 (DIO8)")
+  expect(i2c).not.toContain("port_0")
+  const gpio = conversionError(
+    circuit([
+      { pin_number: 4, name: "DIO11", is_output: true, do_not_connect: true },
+    ]),
+  )
+  expect(gpio).toContain("U1 pin 4 (DIO11)")
+  expect(gpio).toContain(
+    "Correct the conflicting declaration in TSX pinAttributes",
+  )
+  expect(gpio).not.toContain("port_0")
 })

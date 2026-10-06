@@ -45,8 +45,10 @@ Output names are deterministic (`CONFIG_U1_PIN5`, `CONFIG_U1_I2C0`), and pins ar
 sorted by physical identity. No behavior is inferred from signal or net names.
 Unconnected capability-only ports remain unallocated. Connected physical GPIO
 pins without a supported function are reported together, even if all their
-attributes (including `is_gpio`) are missing. Errors identify the MCU, source IDs,
-names and physical pin numbers, and explain which existing TSX attributes to set.
+attributes (including `is_gpio`) are missing. Errors identify the MCU name/part number and physical pin labels (for example,
+`U1 pin 4 (DIO11)`), without generated record IDs. They explain which existing
+TSX attributes to set and distinguish datasheet capabilities from the board
+function that must be selected.
 An MCU with no source ports, or a trace referencing a missing source-port record,
 fails before any output is available. An incomplete I2C selection reports the
 selected endpoints and asks for both SDA and SCL declarations. Passives and other

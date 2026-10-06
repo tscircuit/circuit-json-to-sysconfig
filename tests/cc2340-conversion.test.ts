@@ -341,7 +341,7 @@ test("failed request stage never advances or exposes output", () => {
   const converter = new CircuitJsonToSysConfigConverter(circuit, options)
   converter.step()
   for (let attempt = 0; attempt < 3; attempt++) {
-    expect(() => converter.step()).toThrow("Expected exactly one source_port")
+    expect(() => converter.step()).toThrow("Expected exactly one MCU pin record")
     expect(converter.finished).toBe(false)
     expect(() => converter.getOutput()).toThrow("must finish")
   }
