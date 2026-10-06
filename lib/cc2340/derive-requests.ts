@@ -1,6 +1,7 @@
 import type { CircuitJson, SourcePort, SourceSimpleChip } from "circuit-json"
 import type { Cc2340Target } from "../targets/cc2340r5rge"
 import type { Cc2340GpioConfiguration } from "./configuration"
+import { formatCc2340Component, formatCc2340Pin } from "./format-pin-label"
 import { resolveCc2340LfCrystal } from "./resolve-lf-crystal"
 import {
   checkCc2340Function,
@@ -34,7 +35,7 @@ export function deriveCc2340Requests(
   ctx: { circuitJson: CircuitJson; target: Cc2340Target },
 ): ResolvedCc2340Requests {
   const ports = resolveCc2340SourcePorts(component, ctx)
-  const componentIdentity = `${component.name} (${component.source_component_id}, ${component.manufacturer_part_number})`
+  const componentIdentity = formatCc2340Component(component)
   const connectedIds = new Set(
     ctx.circuitJson.flatMap((element) =>
       element.type === "source_trace" ? element.connected_source_port_ids : [],
@@ -52,16 +53,18 @@ export function deriveCc2340Requests(
   const portIds = new Set<string>()
   const namePrefix = `CONFIG_${component.name.toUpperCase().replace(/[^A-Z0-9_]/g, "_")}`
   for (const port of ports) {
-    const identity = `${component.name}.${port.name} (${port.source_port_id}, pin ${port.pin_number ?? "unspecified"})`
+    const identity = formatCc2340Pin(port, ctx)
     if (portIds.has(port.source_port_id))
-      throw new Error(`Duplicate source_port_id ${port.source_port_id}`)
+      throw new Error(
+        `Duplicate pin record for ${identity}. Rebuild the circuit before generating SysConfig.`,
+      )
     portIds.add(port.source_port_id)
     const unsupported = unsupportedFunctions.find(
       (attribute) => port[attribute] === true,
     )
     if (unsupported)
       throw new Error(
-        `${identity}: unsupported selected function ${unsupported}`,
+        `${identity}: activeCapability: "${unsupported.replace("is_configured_for_", "")}" is unsupported by SysConfig export. Only GPIO and I2C functions are currently supported; keep the intended function and add converter support before exporting.`,
       )
     const isSda = port.is_configured_for_i2c_sda === true
     const isScl = port.is_configured_for_i2c_scl === true
@@ -151,7 +154,7 @@ export function deriveCc2340Requests(
       (!port.is_input && !port.is_output)
     ) {
       missing.push(
-        `${identity}: missing or ambiguous selected function. Set exactly one of isInput/isOutput for GPIO, or activeCapability: "i2c_sda"/"i2c_scl" for I2C in TSX pinAttributes. Capability flags alone do not select a function`,
+        `${identity}: ${port.is_bidirectional ? "bidirectional GPIO is unsupported" : port.is_input && port.is_output ? "both isInput and isOutput are selected" : "no GPIO direction or supported peripheral selected"}`,
       )
       continue
     }
@@ -165,28 +168,28 @@ export function deriveCc2340Requests(
           source_port_id: port.source_port_id,
           gpio_name: `${namePrefix}_PIN${physical.pin.pin}`,
           direction: "input",
-          pull: resolvePull(port),
+          pull: resolvePull(physical),
         }
     checkCc2340Function(physical, request)
     resolved.gpios.push({ request, pin: physical.pin })
   }
   if (missing.length)
     throw new Error(
-      `Unresolved CC2340 pin configuration for ${componentIdentity}:\n${missing.join("\n")}`,
+      `Unresolved CC2340 pin configuration for ${componentIdentity}:\n${missing.map((problem) => `- ${problem}`).join("\n")}\nUpdate ${component.name}'s TSX pinAttributes with the intended function for each listed pin: set exactly one of isInput: true or isOutput: true for GPIO, or activeCapability: "i2c_sda" / "i2c_scl" for I2C.\nDatasheet capabilities such as isGpio describe what a pin supports; they do not select how this board uses it.`,
     )
   if (sdaPorts.length || sclPorts.length) {
     const sda = sdaPorts[0]
     const scl = sclPorts[0]
     if (sdaPorts.length !== 1 || sclPorts.length !== 1 || !sda || !scl)
       throw new Error(
-        `${componentIdentity}: expected exactly one selected I2C SDA and SCL; found ${sdaPorts.length} SDA and ${sclPorts.length} SCL. Declare both endpoints with activeCapability: "i2c_sda"/"i2c_scl" in TSX pinAttributes. Selected source_ports: ${[...sdaPorts, ...sclPorts].map(({ port }) => port.source_port_id).join(", ")}`,
+        `${componentIdentity}: expected exactly one selected I2C SDA and SCL; found ${sdaPorts.length} SDA and ${sclPorts.length} SCL. Declare both endpoints with activeCapability: "i2c_sda"/"i2c_scl" in TSX pinAttributes. Selected pins: ${[...sdaPorts, ...sclPorts].map(({ port }) => formatCc2340Pin(port, ctx)).join(", ")}`,
       )
     if (
       !ctx.target.i2c.sdaPins.some((pin) => pin === sda.pin.pin) ||
       !ctx.target.i2c.sclPins.some((pin) => pin === scl.pin.pin)
     )
       throw new Error(
-        `Unsupported I2C0 pin pair: ${sda.port.source_port_id}/${scl.port.source_port_id}; supported SDA pin ${ctx.target.i2c.sdaPins.join(", ")} and SCL pin ${ctx.target.i2c.sclPins.join(", ")}`,
+        `Unsupported I2C0 pin pair: ${formatCc2340Pin(sda.port, ctx)} / ${formatCc2340Pin(scl.port, ctx)}; supported SDA pin ${ctx.target.i2c.sdaPins.join(", ")} and SCL pin ${ctx.target.i2c.sclPins.join(", ")}`,
       )
     resolved.i2c = {
       request: {
@@ -206,10 +209,13 @@ export function deriveCc2340Requests(
   return resolved
 }
 
-function resolvePull(port: SourcePort): "up" | "down" | "none" | undefined {
+function resolvePull({
+  port,
+  label,
+}: ResolvedCc2340Port): "up" | "down" | "none" | undefined {
   if (port.is_using_internal_pullup && port.is_using_internal_pulldown)
     throw new Error(
-      `${port.source_port_id}: both internal pull-up and pull-down are selected`,
+      `${label}: both internal pull-up and pull-down are selected. Set only one of isUsingInternalPullup / isUsingInternalPulldown in TSX pinAttributes.`,
     )
   if (port.is_using_internal_pullup) return "up"
   if (port.is_using_internal_pulldown) return "down"
