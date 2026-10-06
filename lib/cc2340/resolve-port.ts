@@ -105,7 +105,7 @@ export function checkCc2340Function(
   // TI's I2CLPF3 driver configures both pins with GPIO_CFG_OUT_OD_PU.
   // Open drain is compatible with I2C, but not our standard GPIO output mode.
   if (role === "gpio") {
-    forbidden.push("is_using_open_drain")
+    forbidden.push("is_using_open_drain", "is_bidirectional")
     if (typeof request !== "string")
       forbidden.push(request.direction === "input" ? "is_output" : "is_input")
   } else {

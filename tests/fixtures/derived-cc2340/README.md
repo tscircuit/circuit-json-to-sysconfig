@@ -5,9 +5,6 @@ firmware application preset. It declares output pin 5, input pin 6 with an
 internal pull-up, and I2C SDA/SCL pins 3/19 using the existing pin attributes.
 Physical identities use the converter's independently validated RGE target.
 No startup level, interrupt, bitrate, LF clock or RTOS choice is declared.
-The source ports retain `is_bidirectional: true`, matching the GPIO capabilities
-in TI's RGE pin table and the published CC2340R52E0RGER datasheet metadata.
-This capability neither selects a GPIO direction nor claims SWD/crystal pins.
 
 `bun run validate:cc2340` converts it without request options, runs TI SysConfig
 1.28.1+4785 against official SimpleLink F3 SDK tag `lpf3-9.21.00.36_LTS`, and

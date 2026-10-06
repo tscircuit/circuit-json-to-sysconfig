@@ -227,7 +227,8 @@ test("unused capabilities do not activate GPIO or I2C", () => {
 
 for (const flags of [
   { is_input: true, is_output: true },
-  { is_input: true, is_output: true, is_bidirectional: true },
+  { is_bidirectional: true },
+  { is_output: true, is_bidirectional: true },
   { is_output: true, is_using_open_drain: true },
   { is_output: true, is_using_tri_state: true },
   { is_output: true, is_using_open_collector: true },
@@ -449,7 +450,7 @@ test("pin errors use circuit labels and stay unchanged when generated IDs change
     - U1 pin 4 (DIO11): no GPIO direction or supported peripheral selected
     - U1 pin 6 (DIO13): no GPIO direction or supported peripheral selected
     Update U1's TSX pinAttributes with the intended function for each listed pin: set exactly one of isInput: true or isOutput: true for GPIO, or activeCapability: "i2c_sda" / "i2c_scl" for I2C.
-    Datasheet capabilities such as isGpio and isBidirectional describe what a pin supports; they do not select how this board uses it."
+    Datasheet capabilities such as isGpio describe what a pin supports; they do not select how this board uses it."
   `)
   expect(message).not.toMatch(
     /source_component_123|source_trace_456|mcu|port_0|port_1/,
@@ -471,51 +472,4 @@ test("incomplete I2C and GPIO conflicts name physical pins without record IDs", 
       "i2c": "U1 (CC2340R52E0RGER): expected exactly one selected I2C SDA and SCL; found 1 SDA and 0 SCL. Declare both endpoints with activeCapability: "i2c_sda"/"i2c_scl" in TSX pinAttributes. Selected pins: U1 pin 3 (DIO8)",
     }
   `)
-})
-
-test("bidirectional datasheet capabilities preserve selected GPIO directions and SWD ownership", () => {
-  const input = connected([
-    { pin_number: 4, name: "DIO11", is_output: true },
-    { pin_number: 5, name: "DIO12", is_input: true },
-    { pin_number: 7, name: "DIO16_SWDIO", is_gpio: true },
-    { pin_number: 8, name: "DIO17_SWDCK", is_gpio: true },
-  ])
-  // This unused, capable pin must not acquire a GPIO instance.
-  input.push(
-    source_port.parse({
-      type: "source_port",
-      source_port_id: "unused",
-      source_component_id: "mcu",
-      name: "DIO21_A10",
-      pin_number: 10,
-      is_gpio: true,
-    }),
-  )
-  const baseline = convertCircuitJsonToSysConfig(input).getString()
-  const enriched = input.map((element) =>
-    element.type === "source_port"
-      ? { ...element, is_bidirectional: true }
-      : element,
-  )
-  const before = structuredClone(enriched)
-  expect(convertCircuitJsonToSysConfig(enriched).getString()).toBe(baseline)
-  expect(enriched).toEqual(before)
-})
-
-test("a connected bidirectional capability still requires a board direction", () => {
-  const input = connected([
-    { pin_number: 4, name: "DIO11", is_output: true },
-    { pin_number: 5, name: "DIO12", is_bidirectional: true, is_gpio: true },
-  ])
-  expect(conversionError(input)).toMatchInlineSnapshot(`
-    "Unresolved CC2340 pin configuration for U1 (CC2340R52E0RGER):
-    - U1 pin 5 (DIO12): no GPIO direction or supported peripheral selected
-    Update U1's TSX pinAttributes with the intended function for each listed pin: set exactly one of isInput: true or isOutput: true for GPIO, or activeCapability: "i2c_sda" / "i2c_scl" for I2C.
-    Datasheet capabilities such as isGpio and isBidirectional describe what a pin supports; they do not select how this board uses it."
-  `)
-  const converter = new CircuitJsonToSysConfigConverter(input)
-  converter.step()
-  expect(() => converter.step()).toThrow(/U1 pin 5/)
-  expect(converter.finished).toBe(false)
-  expect(() => converter.getOutput()).toThrow("must finish")
 })
