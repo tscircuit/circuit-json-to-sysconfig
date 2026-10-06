@@ -12,7 +12,8 @@
     "source_component_id": "mcu",
     "name": "DIO11",
     "pin_number": 4,
-    "is_output": true
+    "is_output": true,
+    "is_bidirectional": true
   },
   {
     "type": "source_port",
@@ -20,7 +21,8 @@
     "source_component_id": "mcu",
     "name": "DIO3_X32P",
     "pin_number": 14,
-    "is_gpio": true
+    "is_gpio": true,
+    "is_bidirectional": true
   },
   {
     "type": "source_port",
@@ -28,7 +30,8 @@
     "source_component_id": "mcu",
     "name": "DIO4_X32N",
     "pin_number": 15,
-    "is_gpio": true
+    "is_gpio": true,
+    "is_bidirectional": true
   },
   {
     "type": "source_component",

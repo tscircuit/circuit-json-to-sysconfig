@@ -13,7 +13,8 @@
     "name": "SDA",
     "pin_number": 3,
     "is_configured_for_i2c_sda": true,
-    "is_using_open_drain": true
+    "is_using_open_drain": true,
+    "is_bidirectional": true
   },
   {
     "type": "source_port",
@@ -23,7 +24,8 @@
     "pin_number": 5,
     "is_gpio": true,
     "is_output": true,
-    "is_using_push_pull": true
+    "is_using_push_pull": true,
+    "is_bidirectional": true
   },
   {
     "type": "source_port",
@@ -33,7 +35,8 @@
     "pin_number": 6,
     "is_gpio": true,
     "is_input": true,
-    "is_using_internal_pullup": true
+    "is_using_internal_pullup": true,
+    "is_bidirectional": true
   },
   {
     "type": "source_port",
@@ -42,6 +45,7 @@
     "name": "SCL",
     "pin_number": 19,
     "is_configured_for_i2c_scl": true,
-    "is_using_open_drain": true
+    "is_using_open_drain": true,
+    "is_bidirectional": true
   }
 ]

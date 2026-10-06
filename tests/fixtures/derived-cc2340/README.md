@@ -5,6 +5,9 @@ firmware application preset. It declares output pin 5, input pin 6 with an
 internal pull-up, and I2C SDA/SCL pins 3/19 using the existing pin attributes.
 Physical identities use the converter's independently validated RGE target.
 No startup level, interrupt, bitrate, LF clock or RTOS choice is declared.
+The MCU ports also carry bidirectional capability flags, as published for
+CC2340R52E0RGER. These coexist with the selected GPIO/I2C functions and do not
+select a function themselves.
 
 `bun run validate:cc2340` converts it without request options, runs TI SysConfig
 1.28.1+4785 against official SimpleLink F3 SDK tag `lpf3-9.21.00.36_LTS`, and
