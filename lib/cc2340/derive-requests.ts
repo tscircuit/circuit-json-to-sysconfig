@@ -44,6 +44,7 @@ export function deriveCc2340Requests(
   const resolved: ResolvedCc2340Requests = { target: ctx.target, gpios: [] }
   resolved.lfCrystal = resolveCc2340LfCrystal(ports, ctx)
   const missing: string[] = []
+  let hasGpioDirectionError = false
   const sdaPorts: ResolvedCc2340Port[] = []
   const sclPorts: ResolvedCc2340Port[] = []
   const portContext = {
@@ -149,8 +150,9 @@ export function deriveCc2340Requests(
       port.is_input === port.is_output ||
       (!port.is_input && !port.is_output)
     ) {
+      hasGpioDirectionError = true
       missing.push(
-        `${identity}: ${port.is_input && port.is_output ? "both isInput and isOutput are selected" : "no GPIO direction or supported peripheral selected"}`,
+        `${identity}: ${port.is_input && port.is_output ? "both isInput and isOutput are selected" : "GPIO direction is missing"}`,
       )
       continue
     }
@@ -169,10 +171,14 @@ export function deriveCc2340Requests(
     checkCc2340Function(physical, request)
     resolved.gpios.push({ request, pin: physical.pin })
   }
-  if (missing.length)
+  if (missing.length) {
+    const gpioDirectionInstruction = hasGpioDirectionError
+      ? `\nSet exactly one of isInput: true or isOutput: true in ${component.name}'s TSX pinAttributes.`
+      : ""
     throw new Error(
-      `Unresolved CC2340 pin configuration for ${componentIdentity}:\n${missing.map((problem) => `- ${problem}`).join("\n")}\nUpdate ${component.name}'s TSX pinAttributes with the intended function for each listed pin: set exactly one of isInput: true or isOutput: true for GPIO, or activeCapability: "i2c_sda" / "i2c_scl" for I2C.\nDatasheet capabilities such as isGpio and isBidirectional describe what a pin supports; they do not select how this board uses it.`,
+      `Unresolved CC2340 pin configuration for ${componentIdentity}:\n${missing.map((problem) => `- ${problem}`).join("\n")}${gpioDirectionInstruction}`,
     )
+  }
   if (sdaPorts.length || sclPorts.length) {
     const sda = sdaPorts[0]
     const scl = sclPorts[0]

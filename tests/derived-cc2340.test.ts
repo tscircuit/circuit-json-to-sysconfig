@@ -303,9 +303,8 @@ test("a connected bidirectional capability still requires a board direction", ()
   ])
   expect(conversionError(input)).toMatchInlineSnapshot(`
     "Unresolved CC2340 pin configuration for U1 (CC2340R52E0RGER):
-    - U1 pin 5 (DIO12): no GPIO direction or supported peripheral selected
-    Update U1's TSX pinAttributes with the intended function for each listed pin: set exactly one of isInput: true or isOutput: true for GPIO, or activeCapability: "i2c_sda" / "i2c_scl" for I2C.
-    Datasheet capabilities such as isGpio and isBidirectional describe what a pin supports; they do not select how this board uses it."
+    - U1 pin 5 (DIO12): GPIO direction is missing
+    Set exactly one of isInput: true or isOutput: true in U1's TSX pinAttributes."
   `)
   const converter = new CircuitJsonToSysConfigConverter(input)
   converter.step()
@@ -483,10 +482,9 @@ test("pin errors use circuit labels and stay unchanged when generated IDs change
   expect(conversionError(renamed)).toBe(message)
   expect(message).toMatchInlineSnapshot(`
     "Unresolved CC2340 pin configuration for U1 (CC2340R52E0RGER):
-    - U1 pin 4 (DIO11): no GPIO direction or supported peripheral selected
-    - U1 pin 6 (DIO13): no GPIO direction or supported peripheral selected
-    Update U1's TSX pinAttributes with the intended function for each listed pin: set exactly one of isInput: true or isOutput: true for GPIO, or activeCapability: "i2c_sda" / "i2c_scl" for I2C.
-    Datasheet capabilities such as isGpio and isBidirectional describe what a pin supports; they do not select how this board uses it."
+    - U1 pin 4 (DIO11): GPIO direction is missing
+    - U1 pin 6 (DIO13): GPIO direction is missing
+    Set exactly one of isInput: true or isOutput: true in U1's TSX pinAttributes."
   `)
   expect(message).not.toMatch(
     /source_component_123|source_trace_456|mcu|port_0|port_1/,
