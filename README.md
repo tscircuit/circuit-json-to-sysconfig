@@ -34,9 +34,12 @@ them on source ports:
 | `isUsingInternalPulldown: true` | `is_using_internal_pulldown: true` | Input `pull = "Pull Down"` |
 | `activeCapability: "i2c_sda"` / `"i2c_scl"` | `is_configured_for_i2c_sda` / `is_configured_for_i2c_scl` | I2C0 SDA/SCL on physical RGE pins 3/19 |
 
-`isGpio`, `supports_*`, and `can_use_*` describe capabilities; they do not activate
-an instance. A GPIO requires exactly one input/output flag and no bidirectional
-declaration. I2C accepts open-drain and bidirectional declarations, but rejects
+`isGpio`, `isBidirectional`, `supports_*`, and `can_use_*` describe capabilities;
+they do not activate an instance. Bidirectionality can coexist with an explicit
+input/output choice; a GPIO still requires exactly one input/output flag.
+Unselected SWD and connected LF crystal pins retain their native ownership when
+bidirectional capability metadata is present. I2C accepts open-drain and
+bidirectional declarations, but rejects
 a conflicting GPIO direction. Selected electrical modes must agree with the
 native driver. Tri-state, open-collector/emitter, open-drain GPIO, SPI and UART
 are currently unsupported and fail instead of being dropped.
@@ -45,10 +48,11 @@ Output names are deterministic (`CONFIG_U1_PIN5`, `CONFIG_U1_I2C0`), and pins ar
 sorted by physical identity. No behavior is inferred from signal or net names.
 Unconnected capability-only ports remain unallocated. Connected physical GPIO
 pins without a supported function are reported together, even if all their
-attributes (including `is_gpio`) are missing. Errors identify the MCU name/part number and physical pin labels (for example,
-`U1 pin 4 (DIO11)`), without generated record IDs. They explain which existing
-TSX attributes to set and distinguish datasheet capabilities from the board
-function that must be selected.
+attributes (including `is_gpio`) are missing. Missing-direction errors contain
+one short line per pin with the component name, physical pin number, label and
+problem, for example `- U1 pin 4 (DIO11): GPIO direction is missing`.
+These diagnostics omit manufacturer part numbers, generated record IDs and TSX
+setup instructions.
 An MCU with no source ports, or a trace referencing a missing source-port record,
 fails before any output is available. An incomplete I2C selection reports the
 selected endpoints and asks for both SDA and SCL declarations. Passives and other

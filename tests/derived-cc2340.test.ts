@@ -131,13 +131,12 @@ test("an MCU with no pin records gets an actionable component error", () => {
 })
 
 test("pins with no attributes report every connected physical pin", () => {
-  expect(() =>
-    convertCircuitJsonToSysConfig(
-      connected([{ pin_number: 5 }, { pin_number: 6 }]),
-    ),
-  ).toThrow(
-    /U1 \(CC2340R52E0RGER\)[\s\S]*U1 pin 5 \(signal_0\)[\s\S]*U1 pin 6 \(signal_1\)[\s\S]*isInput: true or isOutput: true/,
-  )
+  expect(
+    conversionError(connected([{ pin_number: 5 }, { pin_number: 6 }])),
+  ).toMatchInlineSnapshot(`
+    "- U1 pin 5 (signal_0): GPIO direction is missing
+    - U1 pin 6 (signal_1): GPIO direction is missing"
+  `)
 })
 
 test("one configured pin cannot hide another pin's missing attributes", () => {
@@ -215,6 +214,7 @@ test("unused capabilities do not activate GPIO or I2C", () => {
       {
         pin_number: 6,
         is_gpio: true,
+        is_bidirectional: true,
         supports_i2c_sda: true,
         can_use_open_drain: true,
       },
@@ -227,8 +227,7 @@ test("unused capabilities do not activate GPIO or I2C", () => {
 
 for (const flags of [
   { is_input: true, is_output: true },
-  { is_bidirectional: true },
-  { is_output: true, is_bidirectional: true },
+  { is_input: true, is_output: true, is_bidirectional: true },
   { is_output: true, is_using_open_drain: true },
   { is_output: true, is_using_tri_state: true },
   { is_output: true, is_using_open_collector: true },
@@ -276,6 +275,39 @@ test("unpaired, duplicate, conflicting and unsupported I2C routes fail", () => {
     ],
   ])
     expect(() => convertCircuitJsonToSysConfig(circuit(ports))).toThrow()
+})
+
+test("bidirectional capabilities preserve selected GPIO directions and SWD ownership", () => {
+  const input = connected([
+    { pin_number: 4, name: "DIO11", is_output: true },
+    { pin_number: 5, name: "DIO12", is_input: true },
+    { pin_number: 7, name: "DIO16_SWDIO", is_gpio: true },
+    { pin_number: 8, name: "DIO17_SWDCK", is_gpio: true },
+  ])
+  const baseline = convertCircuitJsonToSysConfig(input).getString()
+  const enriched = input.map((element) =>
+    element.type === "source_port"
+      ? { ...element, is_bidirectional: true }
+      : element,
+  )
+  const before = structuredClone(enriched)
+  expect(convertCircuitJsonToSysConfig(enriched).getString()).toBe(baseline)
+  expect(enriched).toEqual(before)
+})
+
+test("a connected bidirectional capability still requires a board direction", () => {
+  const input = connected([
+    { pin_number: 4, name: "DIO11", is_output: true },
+    { pin_number: 5, name: "DIO12", is_bidirectional: true, is_gpio: true },
+  ])
+  expect(conversionError(input)).toMatchInlineSnapshot(
+    `"- U1 pin 5 (DIO12): GPIO direction is missing"`,
+  )
+  const converter = new CircuitJsonToSysConfigConverter(input)
+  converter.step()
+  expect(() => converter.step()).toThrow(/U1 pin 5/)
+  expect(converter.finished).toBe(false)
+  expect(() => converter.getOutput()).toThrow("must finish")
 })
 
 test("SDK debug ownership and LF crystal conflicts are explicit", () => {
@@ -368,7 +400,7 @@ test("three stages snapshot inputs, stay deterministic and expose no partial out
 
 test("the unmodified pedometer cannot acquire firmware choices from its name", () => {
   expect(() => convertCircuitJsonToSysConfig(pedometer)).toThrow(
-    /Unresolved CC2340 pin configuration/,
+    /GPIO direction is missing/,
   )
 })
 
@@ -446,11 +478,8 @@ test("pin errors use circuit labels and stay unchanged when generated IDs change
   const message = conversionError(input)
   expect(conversionError(renamed)).toBe(message)
   expect(message).toMatchInlineSnapshot(`
-    "Unresolved CC2340 pin configuration for U1 (CC2340R52E0RGER):
-    - U1 pin 4 (DIO11): no GPIO direction or supported peripheral selected
-    - U1 pin 6 (DIO13): no GPIO direction or supported peripheral selected
-    Update U1's TSX pinAttributes with the intended function for each listed pin: set exactly one of isInput: true or isOutput: true for GPIO, or activeCapability: "i2c_sda" / "i2c_scl" for I2C.
-    Datasheet capabilities such as isGpio describe what a pin supports; they do not select how this board uses it."
+    "- U1 pin 4 (DIO11): GPIO direction is missing
+    - U1 pin 6 (DIO13): GPIO direction is missing"
   `)
   expect(message).not.toMatch(
     /source_component_123|source_trace_456|mcu|port_0|port_1/,

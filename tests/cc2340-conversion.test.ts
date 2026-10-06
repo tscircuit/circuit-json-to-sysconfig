@@ -70,6 +70,20 @@ test("actual board emits three GPIOs and the exact I2C identifiers", () => {
   )
 })
 
+test("explicit requests preserve GPIO and I2C settings with bidirectional capabilities", () => {
+  const enriched = circuit.map((element) =>
+    element.type === "source_port" &&
+    element.source_component_id === pedometerOptions.source_component_id
+      ? { ...element, is_bidirectional: true }
+      : element,
+  )
+  const before = structuredClone(enriched)
+  expect(
+    convertCircuitJsonToSysConfig(enriched, pedometerOptions).getString(),
+  ).toBe(output().getString())
+  expect(enriched).toEqual(before)
+})
+
 test("100000 bits/s becomes numeric 100 kbit/s through serialization and re-parsing", async () => {
   const options = structuredClone(pedometerOptions)
   expect(options.i2c?.max_bit_rate).toBe(100000)
