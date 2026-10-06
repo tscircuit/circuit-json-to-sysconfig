@@ -34,9 +34,10 @@ them on source ports:
 | `isUsingInternalPulldown: true` | `is_using_internal_pulldown: true` | Input `pull = "Pull Down"` |
 | `activeCapability: "i2c_sda"` / `"i2c_scl"` | `is_configured_for_i2c_sda` / `is_configured_for_i2c_scl` | I2C0 SDA/SCL on physical RGE pins 3/19 |
 
-`isGpio`, `supports_*`, and `can_use_*` describe capabilities; they do not activate
-an instance. A GPIO requires exactly one input/output flag and no bidirectional
-declaration. I2C accepts open-drain and bidirectional declarations, but rejects
+`isGpio`, `isBidirectional`, `supports_*`, and `can_use_*` describe capabilities;
+they do not activate an instance. A GPIO requires exactly one input/output flag;
+the datasheet's bidirectional capability can remain present. I2C accepts
+open-drain and bidirectional declarations, but rejects
 a conflicting GPIO direction. Selected electrical modes must agree with the
 native driver. Tri-state, open-collector/emitter, open-drain GPIO, SPI and UART
 are currently unsupported and fail instead of being dropped.

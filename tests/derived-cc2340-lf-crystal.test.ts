@@ -97,6 +97,19 @@ test("direct traces and swapped interchangeable crystal terminals resolve the sa
   )
 })
 
+test("bidirectional GPIO capabilities do not claim the LF crystal pins", () => {
+  const circuitJson = crystalCircuit()
+  for (const pin_number of [4, 14, 15])
+    mcuPort(circuitJson, pin_number).is_bidirectional = false
+  const baseline = convertCircuitJsonToSysConfig(circuitJson).getString()
+  for (const pin_number of [4, 14, 15]) {
+    const port = mcuPort(circuitJson, pin_number)
+    port.is_gpio = true
+    port.is_bidirectional = true
+  }
+  expect(convertCircuitJsonToSysConfig(circuitJson).getString()).toBe(baseline)
+})
+
 test("missing crystal terminals and incomplete wiring remain unresolved", () => {
   for (const source_trace_id of [
     "crystal_p_trace",
@@ -202,7 +215,6 @@ test("multiple connected crystals are ambiguous", () => {
 for (const declarations of [
   { is_output: true },
   { is_input: true },
-  { is_bidirectional: true },
   { is_configured_for_i2c_sda: true },
   { is_using_internal_pullup: true },
   { is_using_open_drain: true },

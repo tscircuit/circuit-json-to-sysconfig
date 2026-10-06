@@ -68,10 +68,8 @@ export function deriveCc2340Requests(
       )
     const isSda = port.is_configured_for_i2c_sda === true
     const isScl = port.is_configured_for_i2c_scl === true
-    const selectedGpio =
-      port.is_input === true ||
-      port.is_output === true ||
-      port.is_bidirectional === true
+    // Datasheet bidirectionality describes capability, not the board's GPIO mode.
+    const selectedGpio = port.is_input === true || port.is_output === true
     const selectedElectricalMode = selectedElectricalModes.some(
       (attribute) => port[attribute] === true,
     )
@@ -149,12 +147,11 @@ export function deriveCc2340Requests(
     }
     if (!connected && !selectedGpio && !selectedElectricalMode) continue
     if (
-      port.is_bidirectional ||
       port.is_input === port.is_output ||
       (!port.is_input && !port.is_output)
     ) {
       missing.push(
-        `${identity}: ${port.is_bidirectional ? "bidirectional GPIO is unsupported" : port.is_input && port.is_output ? "both isInput and isOutput are selected" : "no GPIO direction or supported peripheral selected"}`,
+        `${identity}: ${port.is_input && port.is_output ? "both isInput and isOutput are selected" : "no GPIO direction or supported peripheral selected"}`,
       )
       continue
     }
@@ -175,7 +172,7 @@ export function deriveCc2340Requests(
   }
   if (missing.length)
     throw new Error(
-      `Unresolved CC2340 pin configuration for ${componentIdentity}:\n${missing.map((problem) => `- ${problem}`).join("\n")}\nUpdate ${component.name}'s TSX pinAttributes with the intended function for each listed pin: set exactly one of isInput: true or isOutput: true for GPIO, or activeCapability: "i2c_sda" / "i2c_scl" for I2C.\nDatasheet capabilities such as isGpio describe what a pin supports; they do not select how this board uses it.`,
+      `Unresolved CC2340 pin configuration for ${componentIdentity}:\n${missing.map((problem) => `- ${problem}`).join("\n")}\nUpdate ${component.name}'s TSX pinAttributes with the intended function for each listed pin: set exactly one of isInput: true or isOutput: true for GPIO, or activeCapability: "i2c_sda" / "i2c_scl" for I2C.\nDatasheet capabilities such as isGpio and isBidirectional describe what a pin supports; they do not select how this board uses it.`,
     )
   if (sdaPorts.length || sclPorts.length) {
     const sda = sdaPorts[0]

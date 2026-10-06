@@ -12,6 +12,7 @@
     "source_component_id": "mcu",
     "name": "SDA",
     "pin_number": 3,
+    "is_bidirectional": true,
     "is_configured_for_i2c_sda": true,
     "is_using_open_drain": true
   },
@@ -21,6 +22,7 @@
     "source_component_id": "mcu",
     "name": "OUTPUT",
     "pin_number": 5,
+    "is_bidirectional": true,
     "is_gpio": true,
     "is_output": true,
     "is_using_push_pull": true
@@ -31,6 +33,7 @@
     "source_component_id": "mcu",
     "name": "INPUT",
     "pin_number": 6,
+    "is_bidirectional": true,
     "is_gpio": true,
     "is_input": true,
     "is_using_internal_pullup": true
@@ -41,6 +44,7 @@
     "source_component_id": "mcu",
     "name": "SCL",
     "pin_number": 19,
+    "is_bidirectional": true,
     "is_configured_for_i2c_scl": true,
     "is_using_open_drain": true
   }
