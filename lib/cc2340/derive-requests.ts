@@ -44,7 +44,6 @@ export function deriveCc2340Requests(
   const resolved: ResolvedCc2340Requests = { target: ctx.target, gpios: [] }
   resolved.lfCrystal = resolveCc2340LfCrystal(ports, ctx)
   const missing: string[] = []
-  let hasGpioDirectionError = false
   const sdaPorts: ResolvedCc2340Port[] = []
   const sclPorts: ResolvedCc2340Port[] = []
   const portContext = {
@@ -150,7 +149,6 @@ export function deriveCc2340Requests(
       port.is_input === port.is_output ||
       (!port.is_input && !port.is_output)
     ) {
-      hasGpioDirectionError = true
       missing.push(
         `${identity}: ${port.is_input && port.is_output ? "both isInput and isOutput are selected" : "GPIO direction is missing"}`,
       )
@@ -171,14 +169,8 @@ export function deriveCc2340Requests(
     checkCc2340Function(physical, request)
     resolved.gpios.push({ request, pin: physical.pin })
   }
-  if (missing.length) {
-    const gpioDirectionInstruction = hasGpioDirectionError
-      ? `\nSet exactly one of isInput: true or isOutput: true in ${component.name}'s TSX pinAttributes.`
-      : ""
-    throw new Error(
-      `Unresolved CC2340 pin configuration for ${componentIdentity}:\n${missing.map((problem) => `- ${problem}`).join("\n")}${gpioDirectionInstruction}`,
-    )
-  }
+  if (missing.length)
+    throw new Error(missing.map((problem) => `- ${problem}`).join("\n"))
   if (sdaPorts.length || sclPorts.length) {
     const sda = sdaPorts[0]
     const scl = sclPorts[0]

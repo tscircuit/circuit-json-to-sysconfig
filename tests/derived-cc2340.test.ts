@@ -131,13 +131,12 @@ test("an MCU with no pin records gets an actionable component error", () => {
 })
 
 test("pins with no attributes report every connected physical pin", () => {
-  expect(() =>
-    convertCircuitJsonToSysConfig(
-      connected([{ pin_number: 5 }, { pin_number: 6 }]),
-    ),
-  ).toThrow(
-    /U1 \(CC2340R52E0RGER\)[\s\S]*U1 pin 5 \(signal_0\)[\s\S]*U1 pin 6 \(signal_1\)[\s\S]*isInput: true or isOutput: true/,
-  )
+  expect(
+    conversionError(connected([{ pin_number: 5 }, { pin_number: 6 }])),
+  ).toMatchInlineSnapshot(`
+    "- U1 pin 5 (signal_0): GPIO direction is missing
+    - U1 pin 6 (signal_1): GPIO direction is missing"
+  `)
 })
 
 test("one configured pin cannot hide another pin's missing attributes", () => {
@@ -301,11 +300,9 @@ test("a connected bidirectional capability still requires a board direction", ()
     { pin_number: 4, name: "DIO11", is_output: true },
     { pin_number: 5, name: "DIO12", is_bidirectional: true, is_gpio: true },
   ])
-  expect(conversionError(input)).toMatchInlineSnapshot(`
-    "Unresolved CC2340 pin configuration for U1 (CC2340R52E0RGER):
-    - U1 pin 5 (DIO12): GPIO direction is missing
-    Set exactly one of isInput: true or isOutput: true in U1's TSX pinAttributes."
-  `)
+  expect(conversionError(input)).toMatchInlineSnapshot(
+    `"- U1 pin 5 (DIO12): GPIO direction is missing"`,
+  )
   const converter = new CircuitJsonToSysConfigConverter(input)
   converter.step()
   expect(() => converter.step()).toThrow(/U1 pin 5/)
@@ -403,7 +400,7 @@ test("three stages snapshot inputs, stay deterministic and expose no partial out
 
 test("the unmodified pedometer cannot acquire firmware choices from its name", () => {
   expect(() => convertCircuitJsonToSysConfig(pedometer)).toThrow(
-    /Unresolved CC2340 pin configuration/,
+    /GPIO direction is missing/,
   )
 })
 
@@ -481,10 +478,8 @@ test("pin errors use circuit labels and stay unchanged when generated IDs change
   const message = conversionError(input)
   expect(conversionError(renamed)).toBe(message)
   expect(message).toMatchInlineSnapshot(`
-    "Unresolved CC2340 pin configuration for U1 (CC2340R52E0RGER):
-    - U1 pin 4 (DIO11): GPIO direction is missing
-    - U1 pin 6 (DIO13): GPIO direction is missing
-    Set exactly one of isInput: true or isOutput: true in U1's TSX pinAttributes."
+    "- U1 pin 4 (DIO11): GPIO direction is missing
+    - U1 pin 6 (DIO13): GPIO direction is missing"
   `)
   expect(message).not.toMatch(
     /source_component_123|source_trace_456|mcu|port_0|port_1/,
