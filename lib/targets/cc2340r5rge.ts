@@ -6,6 +6,12 @@ export const cc2340r5rge = {
   part: "Default",
   product: "simplelink_lowpower_f3_sdk@9.21.00.36",
   v2: { device: "CC2340R5", package: "VQFN (RGE)" },
+  // Defaults at lpf3-9.21.00.36_LTS, not application GPIO choices.
+  // GPIOLPF3.syscfg.js _getDefaultAttrs() preserves SWD reset settings.
+  defaultDebugPins: [7, 8],
+  lfCrystalPins: [14, 15],
+  // SWRS272, 32.768 kHz Crystal Oscillator (LFXT) specifications.
+  lfCrystalFrequencyHz: 32768,
   gpioPins: [
     { pin: 3, identifier: "DIO8", aliases: ["DIO8"] },
     { pin: 4, identifier: "DIO11", aliases: ["DIO11"] },

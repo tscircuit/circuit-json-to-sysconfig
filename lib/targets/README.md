@@ -71,7 +71,7 @@ Expected A7/B7 results in the runner are independent of the converter lookup.
 ## Circuit JSON identity contract
 
 The runtime uses `CircuitJson`, `SourcePort`, `source_port`, and `source_simple_chip`
-from `circuit-json@0.0.506`. The inspected schema revision is
+from `circuit-json@0.0.515`. The original identity contract was inspected at
 [`dc40ef8154ecc52773ab960da16faf76ce535b62`](https://github.com/tscircuit/circuit-json/tree/dc40ef8154ecc52773ab960da16faf76ce535b62/src/source).
 `source_port.pin_number` is numeric; `name` and `port_hints` are strings. The
 [core Port implementation](https://github.com/tscircuit/core/blob/e4c437f686004608f47a566fe5ced73fd26cec4f/lib/components/primitive-components/Port/Port.ts)
@@ -87,7 +87,7 @@ no SDK source or generated C is vendored. The upstream MCU+ SDK component is
 BSD-3-Clause per its [manifest](https://github.com/TexasInstruments/mcupsdk-core/blob/e7e068494bbd5714d6d34c55b10184a5bd84ed30/docs/manifest.html).
 [LICENSE-TI.txt](LICENSE-TI.txt) carries its notice with the shipped target setup.
 
-Local tests use Bun 1.3.9, TypeScript 5.9.3, Circuit JSON 0.0.506, and pinned
+Local tests use Bun 1.3.9, TypeScript 5.9.3, Circuit JSON 0.0.515, and pinned
 sysconfigts `35381191fb3946185632d9c4c2ac4c2e69329535`. Converter, native-reference,
 and controlled-runner tests pass. **Real TI generation: PASSED** with the pinned
 tool and SDK. **Firmware compilation and hardware execution: NOT RUN.** See the

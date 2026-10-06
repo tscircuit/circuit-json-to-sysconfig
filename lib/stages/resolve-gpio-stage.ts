@@ -1,4 +1,5 @@
 import type { ConvertContext } from "../ConvertContext"
+import { deriveCc2340Requests } from "../cc2340/derive-requests"
 import { resolveCc2340Requests } from "../cc2340/resolve-requests"
 import { resolveGpioRequest } from "../gpio/resolve-gpio-request"
 
@@ -11,6 +12,17 @@ export function resolveGpioStage(ctx: ConvertContext): void {
         "Multiple GPIO/I2C requests currently require CC2340R52E0RGER",
       )
     ctx.cc2340Requests = resolveCc2340Requests(ctx.options, {
+      circuitJson: ctx.circuitJson,
+      target: ctx.target,
+    })
+    return
+  }
+  if (!("source_port_id" in ctx.options)) {
+    if (ctx.target.manufacturer_part_number !== "CC2340R52E0RGER")
+      throw new Error(
+        "Circuit JSON derivation currently supports CC2340R52E0RGER; AM2434 requires an explicit single-output request",
+      )
+    ctx.cc2340Requests = deriveCc2340Requests(ctx.selectedComponent, {
       circuitJson: ctx.circuitJson,
       target: ctx.target,
     })

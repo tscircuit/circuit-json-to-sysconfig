@@ -2,3 +2,4 @@ export { CircuitJsonToSysConfigConverter } from "./CircuitJsonToSysConfigConvert
 export type { Cc2340GpioRequest, Cc2340Options } from "./cc2340/options"
 export type { ConvertCircuitJsonToSysConfigOptions } from "./convert-circuit-json-to-sysconfig"
 export { convertCircuitJsonToSysConfig } from "./convert-circuit-json-to-sysconfig"
+export type { ResolvedSysConfigConfiguration } from "./ResolvedSysConfigConfiguration"

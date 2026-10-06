@@ -8,7 +8,12 @@ import type {
 } from "./gpio/resolve-gpio-request"
 import type { TiTarget } from "./targets/types"
 
-export type ConvertOptions = GpioRequest | Cc2340Options
+/** Select an MCU when the circuit contains more than one supported target. */
+export interface CircuitJsonSelection {
+  source_component_id?: string
+}
+
+export type ConvertOptions = GpioRequest | Cc2340Options | CircuitJsonSelection
 
 export interface ConvertContext {
   circuitJson: CircuitJson

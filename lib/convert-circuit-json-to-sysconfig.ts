@@ -7,7 +7,7 @@ export type ConvertCircuitJsonToSysConfigOptions = ConvertOptions
 
 export function convertCircuitJsonToSysConfig(
   circuitJson: CircuitJson,
-  options: ConvertCircuitJsonToSysConfigOptions,
+  options?: ConvertCircuitJsonToSysConfigOptions,
 ): SysConfig {
   const converter = new CircuitJsonToSysConfigConverter(circuitJson, options)
   converter.runUntilFinished()

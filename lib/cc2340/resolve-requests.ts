@@ -1,18 +1,19 @@
-import type { CircuitJson } from "circuit-json"
+import type { CircuitJson, SourceSimpleCrystal } from "circuit-json"
 import type { Cc2340Pin, Cc2340Target } from "../targets/cc2340r5rge"
-import {
-  type Cc2340GpioRequest,
-  type Cc2340Options,
-  cc2340Options,
-} from "./options"
+import type {
+  Cc2340GpioConfiguration,
+  Cc2340I2cConfiguration,
+} from "./configuration"
+import { type Cc2340Options, cc2340Options } from "./options"
 import { checkCc2340Function, resolveCc2340Port } from "./resolve-port"
 
 export interface ResolvedCc2340Requests {
   target: Cc2340Target
-  options: Cc2340Options
-  gpios: { request: Cc2340GpioRequest; pin: Cc2340Pin }[]
+  options?: Cc2340Options
+  lfCrystal?: SourceSimpleCrystal
+  gpios: { request: Cc2340GpioConfiguration; pin: Cc2340Pin }[]
   i2c?: {
-    request: NonNullable<Cc2340Options["i2c"]>
+    request: Cc2340I2cConfiguration
     sda: Cc2340Pin
     scl: Cc2340Pin
   }

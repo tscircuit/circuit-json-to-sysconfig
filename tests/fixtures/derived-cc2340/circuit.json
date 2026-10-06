@@ -1,0 +1,47 @@
+[
+  {
+    "type": "source_component",
+    "ftype": "simple_chip",
+    "source_component_id": "mcu",
+    "name": "U1",
+    "manufacturer_part_number": "CC2340R52E0RGER"
+  },
+  {
+    "type": "source_port",
+    "source_port_id": "sda",
+    "source_component_id": "mcu",
+    "name": "SDA",
+    "pin_number": 3,
+    "is_configured_for_i2c_sda": true,
+    "is_using_open_drain": true
+  },
+  {
+    "type": "source_port",
+    "source_port_id": "output",
+    "source_component_id": "mcu",
+    "name": "OUTPUT",
+    "pin_number": 5,
+    "is_gpio": true,
+    "is_output": true,
+    "is_using_push_pull": true
+  },
+  {
+    "type": "source_port",
+    "source_port_id": "input",
+    "source_component_id": "mcu",
+    "name": "INPUT",
+    "pin_number": 6,
+    "is_gpio": true,
+    "is_input": true,
+    "is_using_internal_pullup": true
+  },
+  {
+    "type": "source_port",
+    "source_port_id": "scl",
+    "source_component_id": "mcu",
+    "name": "SCL",
+    "pin_number": 19,
+    "is_configured_for_i2c_scl": true,
+    "is_using_open_drain": true
+  }
+]
