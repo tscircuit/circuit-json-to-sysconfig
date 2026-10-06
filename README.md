@@ -43,9 +43,15 @@ are currently unsupported and fail instead of being dropped.
 
 Output names are deterministic (`CONFIG_U1_PIN5`, `CONFIG_U1_I2C0`), and pins are
 sorted by physical identity. No behavior is inferred from signal or net names.
-Unconnected capability-only ports remain unallocated. Connected GPIO-capable
-ports without a supported function are reported together, with source IDs,
-names and physical pin numbers. Duplicate identities and contradictory aliases
+Unconnected capability-only ports remain unallocated. Connected physical GPIO
+pins without a supported function are reported together, even if all their
+attributes (including `is_gpio`) are missing. Errors identify the MCU, source IDs,
+names and physical pin numbers, and explain which existing TSX attributes to set.
+An MCU with no source ports, or a trace referencing a missing source-port record,
+fails before any output is available. An incomplete I2C selection reports the
+selected endpoints and asks for both SDA and SCL declarations. Passives and other
+components do not need GPIO attributes; unused pins and fixed power/debug/crystal
+functions retain the rules described here. Duplicate identities and contradictory aliases
 remain errors. SWD pins 7/8 retain the SDK's reset settings unless the circuit
 explicitly selects a supported GPIO function.
 When a `simple_crystal` declaring 32768 Hz connects its two distinct terminals

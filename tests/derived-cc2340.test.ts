@@ -105,6 +105,109 @@ test("connected GPIO capability alone reports every unresolved pin", () => {
   ).toThrow(/port_0.*pin 5[\s\S]*port_1.*pin 6/)
 })
 
+test("missing connected pin records prevent a partial configuration", () => {
+  const input = connected([
+    { pin_number: 5, is_output: true },
+    { pin_number: 6, is_input: true },
+    { pin_number: 12, is_input: true },
+  ]).filter(
+    (element) =>
+      element.type !== "source_port" || element.source_port_id === "port_0",
+  )
+  const converter = new CircuitJsonToSysConfigConverter(input)
+  converter.step()
+  expect(() => converter.step()).toThrow(
+    /trace: missing source_port port_1[\s\S]*trace: missing source_port port_2[\s\S]*Rebuild/,
+  )
+  expect(converter.finished).toBe(false)
+  expect(() => converter.getOutput()).toThrow("must finish")
+  expect(() => converter.getResolvedConfiguration()).toThrow("must finish")
+})
+
+test("an MCU with no pin records gets an actionable component error", () => {
+  expect(() => convertCircuitJsonToSysConfig(circuit([]))).toThrow(
+    /U1 \(mcu, CC2340R52E0RGER\): no source_port records[\s\S]*pinAttributes/,
+  )
+})
+
+test("pins with no attributes report every connected physical pin", () => {
+  expect(() =>
+    convertCircuitJsonToSysConfig(
+      connected([{ pin_number: 5 }, { pin_number: 6 }]),
+    ),
+  ).toThrow(
+    /U1 \(mcu, CC2340R52E0RGER\)[\s\S]*U1.signal_0 \(port_0, pin 5\)[\s\S]*isInput\/isOutput[\s\S]*U1.signal_1 \(port_1, pin 6\)/,
+  )
+})
+
+test("one configured pin cannot hide another pin's missing attributes", () => {
+  expect(() =>
+    convertCircuitJsonToSysConfig(
+      connected([
+        { pin_number: 5, is_output: true },
+        { pin_number: 6, supports_i2c_sda: true },
+        { pin_number: 12 },
+      ]),
+    ),
+  ).toThrow(/port_1, pin 6[\s\S]*port_2, pin 12/)
+})
+
+test("a connected pin with no attributes still needs its physical identity", () => {
+  expect(() =>
+    convertCircuitJsonToSysConfig(
+      connected([{ pin_number: 5, is_output: true }, {}]),
+    ),
+  ).toThrow(/U1.signal_1.*port_1.*numeric RGE physical pin/)
+})
+
+test("connected fixed pins and other components do not need GPIO attributes", () => {
+  const input = connected([
+    { pin_number: 5, is_output: true },
+    { pin_number: 7 },
+    { pin_number: 8 },
+    { pin_number: 1, requires_power: true },
+  ])
+  input.push(
+    {
+      type: "source_component",
+      ftype: "simple_resistor",
+      source_component_id: "resistor",
+      name: "R1",
+      resistance: 1000,
+    },
+    source_port.parse({
+      type: "source_port",
+      source_component_id: "resistor",
+      source_port_id: "resistor_pin",
+      name: "pin1",
+      pin_number: 1,
+    }),
+    {
+      type: "source_trace",
+      source_trace_id: "output_trace",
+      connected_source_port_ids: ["port_0", "resistor_pin"],
+      connected_source_net_ids: [],
+    },
+  )
+  expect(convertCircuitJsonToSysConfig(input).instances).toHaveLength(1)
+})
+
+test("capability-only unconnected pins still need a function to generate SysConfig", () => {
+  expect(() =>
+    convertCircuitJsonToSysConfig(circuit([{ pin_number: 5, is_gpio: true }])),
+  ).toThrow(
+    /U1[\s\S]*no configured[\s\S]*pinAttributes[\s\S]*isInput\/isOutput/,
+  )
+})
+
+test("an incomplete I2C selection identifies the MCU and how to complete it", () => {
+  expect(() =>
+    convertCircuitJsonToSysConfig(
+      circuit([{ pin_number: 3, is_configured_for_i2c_sda: true }]),
+    ),
+  ).toThrow(/U1[\s\S]*1 SDA and 0 SCL[\s\S]*activeCapability[\s\S]*port_0/)
+})
+
 test("unused capabilities do not activate GPIO or I2C", () => {
   const source = convertCircuitJsonToSysConfig(
     circuit([

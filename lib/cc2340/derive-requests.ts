@@ -1,9 +1,4 @@
-import {
-  type CircuitJson,
-  type SourcePort,
-  type SourceSimpleChip,
-  source_port,
-} from "circuit-json"
+import type { CircuitJson, SourcePort, SourceSimpleChip } from "circuit-json"
 import type { Cc2340Target } from "../targets/cc2340r5rge"
 import type { Cc2340GpioConfiguration } from "./configuration"
 import { resolveCc2340LfCrystal } from "./resolve-lf-crystal"
@@ -13,6 +8,7 @@ import {
   resolveCc2340Port,
 } from "./resolve-port"
 import type { ResolvedCc2340Requests } from "./resolve-requests"
+import { resolveCc2340SourcePorts } from "./resolve-source-ports"
 
 const unsupportedFunctions: (keyof SourcePort)[] = [
   "is_configured_for_spi_mosi",
@@ -37,18 +33,8 @@ export function deriveCc2340Requests(
   component: SourceSimpleChip,
   ctx: { circuitJson: CircuitJson; target: Cc2340Target },
 ): ResolvedCc2340Requests {
-  const ports = ctx.circuitJson
-    .filter(
-      (element) =>
-        element.type === "source_port" &&
-        element.source_component_id === component.source_component_id,
-    )
-    .map((port) => source_port.parse(port))
-    .sort(
-      (a, b) =>
-        (a.pin_number ?? Infinity) - (b.pin_number ?? Infinity) ||
-        a.source_port_id.localeCompare(b.source_port_id),
-    )
+  const ports = resolveCc2340SourcePorts(component, ctx)
+  const componentIdentity = `${component.name} (${component.source_component_id}, ${component.manufacturer_part_number})`
   const connectedIds = new Set(
     ctx.circuitJson.flatMap((element) =>
       element.type === "source_trace" ? element.connected_source_port_ids : [],
@@ -66,7 +52,7 @@ export function deriveCc2340Requests(
   const portIds = new Set<string>()
   const namePrefix = `CONFIG_${component.name.toUpperCase().replace(/[^A-Z0-9_]/g, "_")}`
   for (const port of ports) {
-    const identity = `${port.source_port_id} (${port.name}, pin ${port.pin_number ?? "unspecified"})`
+    const identity = `${component.name}.${port.name} (${port.source_port_id}, pin ${port.pin_number ?? "unspecified"})`
     if (portIds.has(port.source_port_id))
       throw new Error(`Duplicate source_port_id ${port.source_port_id}`)
     portIds.add(port.source_port_id)
@@ -165,7 +151,7 @@ export function deriveCc2340Requests(
       (!port.is_input && !port.is_output)
     ) {
       missing.push(
-        `${identity}: select a supported function in TSX pinAttributes (GPIO: exactly one of isInput/isOutput; I2C: activeCapability). Circuit JSON capability flags alone do not select a function`,
+        `${identity}: missing or ambiguous selected function. Set exactly one of isInput/isOutput for GPIO, or activeCapability: "i2c_sda"/"i2c_scl" for I2C in TSX pinAttributes. Capability flags alone do not select a function`,
       )
       continue
     }
@@ -186,14 +172,14 @@ export function deriveCc2340Requests(
   }
   if (missing.length)
     throw new Error(
-      `Unresolved CC2340 pin configuration:\n${missing.join("\n")}`,
+      `Unresolved CC2340 pin configuration for ${componentIdentity}:\n${missing.join("\n")}`,
     )
   if (sdaPorts.length || sclPorts.length) {
     const sda = sdaPorts[0]
     const scl = sclPorts[0]
     if (sdaPorts.length !== 1 || sclPorts.length !== 1 || !sda || !scl)
       throw new Error(
-        `Expected exactly one selected I2C SDA and SCL; found ${sdaPorts.length} SDA and ${sclPorts.length} SCL`,
+        `${componentIdentity}: expected exactly one selected I2C SDA and SCL; found ${sdaPorts.length} SDA and ${sclPorts.length} SCL. Declare both endpoints with activeCapability: "i2c_sda"/"i2c_scl" in TSX pinAttributes. Selected source_ports: ${[...sdaPorts, ...sclPorts].map(({ port }) => port.source_port_id).join(", ")}`,
       )
     if (
       !ctx.target.i2c.sdaPins.some((pin) => pin === sda.pin.pin) ||
@@ -215,7 +201,7 @@ export function deriveCc2340Requests(
   }
   if (!resolved.gpios.length && !resolved.i2c)
     throw new Error(
-      "No configured CC2340 GPIO/I2C pins; capability flags alone do not activate peripherals",
+      `${componentIdentity}: no configured CC2340 GPIO/I2C pins. Declare a supported function in TSX pinAttributes: exactly one of isInput/isOutput for GPIO, or activeCapability: "i2c_sda"/"i2c_scl" for I2C. Capability flags alone do not activate peripherals`,
     )
   return resolved
 }
