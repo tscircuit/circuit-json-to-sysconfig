@@ -4,12 +4,14 @@ import type { ConvertContext } from "../ConvertContext"
 import { am2434bsdfhialvr } from "../targets/am2434bsdfhialvr"
 import { cc2340r5rge } from "../targets/cc2340r5rge"
 import { resolveTiTarget } from "../targets/resolve-ti-target"
+import { validateCircuitJson } from "../validation/validate-circuit-json"
 
 const selection = z
   .object({ source_component_id: z.string().min(1).optional() })
   .strict()
 
 export function resolveTargetStage(ctx: ConvertContext): void {
+  validateCircuitJson(ctx.circuitJson)
   if (!("gpios" in ctx.options) && !("source_port_id" in ctx.options))
     selection.parse(ctx.options)
   const components = ctx.circuitJson.filter(

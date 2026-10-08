@@ -53,6 +53,22 @@ one short line per pin with the component name, physical pin number, label and
 problem, for example `- U1 pin 4 (DIO11): GPIO direction is missing`.
 These diagnostics omit manufacturer part numbers, generated record IDs and TSX
 setup instructions.
+Source ports reject unknown fields and invalid attribute types before target
+resolution. Errors identify the component, physical pin and label, for example
+`U1 pin 4 (DIO11): is_output must be boolean`. Malformed source connections and
+non-object records fail with a record reference instead of a runtime exception.
+Schematic and PCB payloads are preserved and are not validated by this converter.
+
+A selected electrical mode or peripheral cannot contradict an explicit `false`
+in its corresponding `can_use_*` or `supports_*` capability. For example,
+`is_using_internal_pullup: true` with `can_use_internal_pullup: false` fails as
+`U1 pin 4 (DIO11): internal pull-up is not supported`. Omitted capabilities remain
+unknown; capability flags alone do not activate settings. CC2340 requests also
+check the capabilities required by the native driver: standard GPIO outputs
+require push-pull support, input pulls require their matching capability, and I2C
+requires its endpoint capability, open drain and an internal pull-up. Explicit
+requests cannot bypass these checks. Failure leaves converter output unavailable.
+
 An MCU with no source ports, or a trace referencing a missing source-port record,
 fails before any output is available. An incomplete I2C selection reports the
 selected endpoints and asks for both SDA and SCL declarations. Passives and other

@@ -1,5 +1,9 @@
 import { type CircuitJson, type SourcePort, source_port } from "circuit-json"
 import type { Cc2340Pin, Cc2340Target } from "../targets/cc2340r5rge"
+import {
+  type SelectedPinAttribute,
+  validatePinCapabilities,
+} from "../validation/validate-pin-capabilities"
 import type { Cc2340GpioConfiguration } from "./configuration"
 import { formatCc2340Pin } from "./format-pin-label"
 
@@ -85,6 +89,23 @@ export function checkCc2340Function(
 ) {
   const { port, label } = resolved
   const role = typeof request === "string" ? request : "gpio"
+  const selectedAttributes: SelectedPinAttribute[] = []
+  if (typeof request === "string") {
+    selectedAttributes.push(
+      request === "sda"
+        ? "is_configured_for_i2c_sda"
+        : "is_configured_for_i2c_scl",
+      "is_using_open_drain",
+      "is_using_internal_pullup",
+    )
+  } else if (request.direction === "output") {
+    selectedAttributes.push("is_using_push_pull")
+  } else if (request.pull === "up") {
+    selectedAttributes.push("is_using_internal_pullup")
+  } else if (request.pull === "down") {
+    selectedAttributes.push("is_using_internal_pulldown")
+  }
+  validatePinCapabilities(port, { pinLabel: label, selectedAttributes })
   const forbidden: (keyof SourcePort)[] = [
     "is_configured_for_spi_mosi",
     "is_configured_for_spi_miso",

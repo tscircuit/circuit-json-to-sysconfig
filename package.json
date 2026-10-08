@@ -22,7 +22,7 @@
     "validate:cc2340": "bun scripts/validate-cc2340.ts"
   },
   "dependencies": {
-    "circuit-json": "0.0.515",
+    "circuit-json": "0.0.522",
     "circuit-json-to-connectivity-map": "0.0.32",
     "sysconfigts": "github:tscircuit/sysconfigts#35381191fb3946185632d9c4c2ac4c2e69329535",
     "zod": "3.25.76"
